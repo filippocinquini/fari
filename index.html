@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Fari nella Tempesta</title>
+<meta name="description" content="Gioco da tavolo cooperativo per due, online e gratuito.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2310303b'/%3E%3Cpath d='M13 27h6l-1-15h-4z' fill='%23ead9b2'/%3E%3Cpath d='M12 12h8l-1-4h-6z' fill='%23c41f3a'/%3E%3Cpath d='M20 9l9-4v8z' fill='%23f0b43c' opacity='.85'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Familjen+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+
+/* Layout: carta nautica. Plancia dell'arcipelago a sinistra, "timone" (marea, filo, azioni, mani) a destra; su telefono tutto in colonna. */
+:root{
+  --sea:#dbe7ea; --grid:rgba(16,48,59,.06); --panel:#eef5f6; --panel-2:#e1ecef; --ink:#10303b; --ink-2:#4b6872; --line:#b3c9cf;
+  --deep:#bcd6de; --land:#ead9b2; --land-2:#d6c08f; --land-ink:#3a2c12; --flood:#9fcddb; --wave:#78b2c4; --flood-ink:#0d3a49;
+  --accent:#0d6b86; --accent-ink:#ffffff; --target:#0b6a86; --filo:#c41f3a; --veil:rgba(16,48,59,.55);
+  --ambra:#c9870c; --corallo:#d14f37; --giada:#1f8f63; --zaffiro:#2a5cc0;
+  --pA:#6b3ea2; --pA-ink:#ffffff; --pB:#10303b; --pB-ink:#ffffff;
+  --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --f-body:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --sea:#08171e; --grid:rgba(160,210,225,.05); --panel:#0f232c; --panel-2:#163039; --ink:#d9e8ed; --ink-2:#8aa7b1; --line:#24434f;
+  --deep:#0c2a35; --land:#cbb68a; --land-2:#a99063; --land-ink:#241a08; --flood:#2a6c82; --wave:#3e8ba3; --flood-ink:#e6f6fb;
+  --accent:#55b9d6; --accent-ink:#06202a; --target:#86d8ef; --filo:#ff5f74; --veil:rgba(2,10,14,.7);
+  --ambra:#f0b43c; --corallo:#f2745a; --giada:#3fc492; --zaffiro:#6e9af2;
+  --pA:#b08ae6; --pA-ink:#160a26; --pB:#eef6f8; --pB-ink:#08171e; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --sea:#08171e; --grid:rgba(160,210,225,.05); --panel:#0f232c; --panel-2:#163039; --ink:#d9e8ed; --ink-2:#8aa7b1; --line:#24434f;
+  --deep:#0c2a35; --land:#cbb68a; --land-2:#a99063; --land-ink:#241a08; --flood:#2a6c82; --wave:#3e8ba3; --flood-ink:#e6f6fb;
+  --accent:#55b9d6; --accent-ink:#06202a; --target:#86d8ef; --filo:#ff5f74; --veil:rgba(2,10,14,.7);
+  --ambra:#f0b43c; --corallo:#f2745a; --giada:#3fc492; --zaffiro:#6e9af2;
+  --pA:#b08ae6; --pA-ink:#160a26; --pB:#eef6f8; --pB-ink:#08171e; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--sea);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:44px 44px}
+#app{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 48px}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--target);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);margin:0}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:.95;letter-spacing:.005em}
+
+/* buttons */
+.btn{font-weight:600;font-size:14px;padding:9px 13px;border-radius:9px;border:1.5px solid var(--line);background:var(--panel-2);color:var(--ink);cursor:pointer;line-height:1.15;text-align:left}
+.btn:hover:not(:disabled){border-color:var(--ink-2)}
+.btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--sea)}
+.btn.filo{border-color:var(--filo);color:var(--filo);background:transparent}
+.btn.ghost{background:transparent}
+.btn small{display:block;font-weight:500;font-size:11.5px;opacity:.75;margin-top:2px}
+.linkish{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-size:13.5px}
+
+/* ---------- lobby ---------- */
+.hero{position:relative;padding-block:28px 22px;overflow:hidden;display:grid;gap:12px}
+.hero h1{font-size:clamp(52px,11vw,118px);font-weight:900;text-transform:uppercase;position:relative}
+.hero h1 span{display:block;color:var(--accent)}
+.hero .lede{max-width:56ch;font-size:17px;margin:0;position:relative}
+.beam{position:absolute;right:-60px;top:-80px;width:420px;height:420px;border-radius:50%;pointer-events:none;
+  background:conic-gradient(from 200deg,transparent 0deg,color-mix(in srgb,var(--ambra) 38%,transparent) 16deg,transparent 34deg);
+  animation:sweep 9s linear infinite;opacity:.8}
+@keyframes sweep{to{transform:rotate(360deg)}}
+.status-line{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:11px 14px;border-radius:10px;background:var(--panel);border:1px solid var(--line);font-size:14px;margin-bottom:18px}
+.status-line.warn{border-color:var(--filo)}
+.seats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:720px){.seats{grid-template-columns:minmax(0,1fr)}}
+.seat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px;align-content:start;min-width:0}
+.seat-head{display:flex;align-items:center;gap:10px}
+.seat-head h3{font-size:30px;font-weight:800}
+.seat-head .eyebrow{margin-left:auto}
+.dot{width:22px;height:22px;border-radius:50%;flex:none;border:2px solid var(--panel)}
+.dot.A{background:var(--pA)} .dot.B{background:var(--pB)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+input[type=text]{font:inherit;font-size:16px;padding:10px 12px;border-radius:9px;border:1.5px solid var(--line);background:var(--sea);color:var(--ink);min-width:0;flex:1 1 160px}
+.roles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.roles .btn{min-height:64px}
+.levels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}
+@media (max-width:720px){.levels{grid-template-columns:minmax(0,1fr)}}
+.level{text-align:left;padding:14px 16px;border-radius:14px;border:1.5px solid var(--line);background:var(--panel);cursor:pointer;display:grid;gap:6px}
+.level[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.level h3{font-size:28px;font-weight:800}
+.level ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--ink-2)}
+.start{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:20px}
+.start .btn{font-size:17px;padding:13px 22px}
+.note{font-size:13.5px;color:var(--ink-2);margin:0}
+
+/* ---------- game ---------- */
+.top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:14px}
+.top .brand{font-family:var(--f-display);font-weight:900;font-size:28px;text-transform:uppercase;line-height:1}
+.top .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-left:auto}
+.pill{font-family:var(--f-mono);font-size:12px;padding:4px 9px;border-radius:99px;border:1px solid var(--line);background:var(--panel)}
+.layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:880px){.layout{grid-template-columns:minmax(0,1fr)}}
+.col{display:grid;gap:14px;min-width:0}
+.banner{border-radius:12px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);display:grid;gap:3px}
+.banner.mine{background:var(--ink);color:var(--sea);border-color:var(--ink)}
+.banner.mine .sub{color:inherit;opacity:.8}
+.banner .big{font-family:var(--f-display);font-weight:800;font-size:26px;line-height:1}
+.banner .sub{font-size:13.5px;color:var(--ink-2)}
+.hint{font-size:13.5px;color:var(--ink-2);min-height:1.4em;margin:0}
+
+.board{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:10px;border-radius:16px;width:100%;max-width:580px;margin-inline:auto;
+  background:var(--deep);background-image:radial-gradient(circle at 1px 1px,var(--grid) 1.5px,transparent 0);background-size:14px 14px}
+.cell{aspect-ratio:1;border-radius:9px;position:relative;min-width:0;max-width:100%}
+.sea-cell{display:grid;place-items:center}
+.ghost{font-size:9px;color:var(--ink-2);opacity:.55;text-decoration:line-through;text-align:center;padding:2px;overflow-wrap:anywhere}
+.tile{background:var(--land);color:var(--land-ink);border:0;padding:5px;display:flex;flex-direction:column;justify-content:flex-end;text-align:left;box-shadow:inset 0 -4px 0 var(--land-2)}
+.tile.s1{background:repeating-linear-gradient(135deg,var(--flood) 0 7px,var(--wave) 7px 9px);color:var(--flood-ink);box-shadow:none}
+.tile .nm{font-weight:700;font-size:clamp(8.5px,1.75vw,12px);line-height:1.02;overflow-wrap:anywhere;position:relative}
+.tile .co{position:absolute;top:4px;left:5px;font-family:var(--f-mono);font-size:9px;opacity:.65}
+.tile .gem{position:absolute;top:7px;right:7px}
+.tile .molo{position:absolute;top:4px;right:4px;font-family:var(--f-mono);font-size:8.5px;font-weight:600;background:var(--land-ink);color:var(--land);padding:1px 4px;border-radius:3px;letter-spacing:.05em}
+.tile.s1 .molo{background:var(--flood-ink);color:var(--flood)}
+.tile .wet{font-family:var(--f-mono);font-size:8.5px;opacity:.85;text-transform:uppercase;letter-spacing:.06em}
+.pawns{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);display:flex;gap:2px}
+.pawn{width:clamp(17px,4.6vw,26px);height:clamp(17px,4.6vw,26px);border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:clamp(9px,2.2vw,12px);border:2px solid var(--land);box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.pawn.A{background:var(--pA);color:var(--pA-ink)} .pawn.B{background:var(--pB);color:var(--pB-ink)}
+button.tile{cursor:pointer;outline:3px solid var(--target);outline-offset:-2px}
+button.tile:hover{filter:brightness(1.06)}
+.tile.recent .co::after{content:" ≈";font-weight:700}
+.tile.hit{animation:hit 1.6s ease-out}
+@keyframes hit{0%{transform:scale(1.1);filter:brightness(1.4)}40%{transform:scale(.97)}100%{transform:none}}
+.gem{width:12px;height:12px;transform:rotate(45deg);border-radius:2px;background:var(--g);display:inline-block;flex:none}
+.gem.hollow{background:transparent;box-shadow:inset 0 0 0 2px var(--g)}
+.g-ambra{--g:var(--ambra)} .g-corallo{--g:var(--corallo)} .g-giada{--g:var(--giada)} .g-zaffiro{--g:var(--zaffiro)}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:12px;min-width:0}
+.panel h3{font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:.02em}
+.stat{display:grid;gap:6px}
+.stat .lbl{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--ink-2)}
+.stat .lbl b{color:var(--ink);font-weight:600}
+.meter{display:flex;gap:3px}
+.meter span{flex:1;min-width:0;height:26px;display:grid;place-items:center;font-family:var(--f-mono);font-size:12px;background:var(--panel-2);border-radius:4px;color:var(--ink-2)}
+.meter .past{background:var(--wave);color:var(--flood-ink)}
+.meter .now{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.meter .skull{background:var(--ink);color:var(--sea)}
+.filo-track{display:flex;align-items:center;gap:0;position:relative;width:max-content}
+.filo-track::before{content:"";position:absolute;left:8px;right:8px;top:50%;height:2px;background:var(--filo);opacity:.5}
+.knot{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--filo);background:var(--panel);position:relative;margin-right:22px}
+.knot:last-child{margin-right:0}
+.knot.on{background:var(--filo)}
+.lenses{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.lens{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 4px;border-radius:9px;background:var(--panel-2);font-size:12px;font-weight:600;text-align:center}
+.lens .gem{width:16px;height:16px}
+.lens.got{background:color-mix(in srgb,var(--g) 22%,var(--panel))}
+.decks{font-size:12px;color:var(--ink-2)}
+.actions{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px}
+.actions .wide{grid-column:1/-1}
+.endrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.endrow .btn{text-align:center}
+.reason{font-size:12.5px;color:var(--ink-2);margin:0}
+
+.hand-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hand-head strong{font-size:15px}
+.hand-head .role{font-size:12.5px;color:var(--ink-2)}
+.cards{display:flex;flex-wrap:wrap;gap:6px;min-height:84px}
+.card{width:60px;height:84px;border-radius:8px;border:1.5px solid var(--line);background:var(--panel-2);display:flex;flex-direction:column;overflow:hidden;padding:0;text-align:left;cursor:default}
+button.card.live{cursor:pointer}
+button.card.live:hover{border-color:var(--ink-2)}
+.card .band{height:36px;display:grid;place-items:center;background:var(--g)}
+.card .band .gem{background:var(--panel);width:12px;height:12px}
+.card .cn{font-size:11px;font-weight:700;padding:5px 5px 0;line-height:1.1}
+.card .ck{font-family:var(--f-mono);font-size:9px;padding:2px 5px;color:var(--ink-2)}
+.card.sp-sacchi .band{background:repeating-linear-gradient(0deg,var(--land) 0 6px,var(--land-2) 6px 8px)}
+.card.sp-vento .band{background:repeating-linear-gradient(170deg,var(--panel) 0 5px,var(--wave) 5px 7px)}
+.card.pick{outline:3px solid var(--target);outline-offset:1px}
+.card.sel{outline:3px dashed var(--target);outline-offset:1px}
+.card:disabled{opacity:1}
+.empty-hand{font-size:13px;color:var(--ink-2);align-self:center}
+
+.reacts{display:flex;flex-wrap:wrap;gap:6px}
+.reacts .btn{padding:7px 11px;font-size:13px}
+.log{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13px;max-height:220px;overflow:auto}
+.log li{padding-left:10px;border-left:2px solid var(--line);color:var(--ink-2)}
+.log li:first-child{color:var(--ink);border-left-color:var(--accent)}
+
+details.rules{margin-top:22px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:4px 16px}
+details.rules summary{cursor:pointer;font-family:var(--f-display);font-weight:800;font-size:22px;text-transform:uppercase;padding-block:10px}
+.rules-body{display:grid;gap:12px;padding-bottom:16px;max-width:72ch;font-size:14.5px}
+.rules-body h4{margin:6px 0 0;font-size:14px;text-transform:uppercase;letter-spacing:.06em;font-family:var(--f-mono);color:var(--ink-2)}
+.rules-body p,.rules-body ul,.rules-body ol{margin:0}
+.rules-body li{margin-bottom:4px}
+.tbl-wrap{overflow-x:auto}
+table.cmp{border-collapse:collapse;font-size:13.5px;min-width:440px}
+table.cmp th,table.cmp td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left}
+table.cmp th{font-family:var(--f-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2)}
+
+.overlay{position:fixed;inset:0;background:var(--veil);display:grid;place-items:center;z-index:30;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.end-card{background:var(--panel);border-radius:18px;padding:24px;max-width:460px;width:100%;display:grid;gap:12px;border:1px solid var(--line)}
+.end-card h2{font-size:44px;font-weight:900;text-transform:uppercase}
+.end-card.won h2{color:var(--accent)}
+.end-card.lost h2{color:var(--filo)}
+
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:40;display:grid;gap:6px;pointer-events:none;width:max-content;max-width:calc(100vw - 32px)}
+.t{background:var(--ink);color:var(--sea);padding:10px 16px;border-radius:99px;font-weight:600;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.25);animation:tin .25s ease-out}
+.t.love{background:var(--filo);color:#fff}
+@keyframes tin{from{transform:translateY(8px);opacity:0}}
+@media (prefers-reduced-motion: reduce){.beam,.t,.tile.hit{animation:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" aria-live="polite"></div>
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script>
+/* ===== Regole del gioco (pure, senza DOM) ===== */
+const GEMS=['ambra','corallo','giada','zaffiro'];
+const GEM_NAME={ambra:'Ambra',corallo:'Corallo',giada:'Giada',zaffiro:'Zaffiro'};
+const ROLES={
+  esploratrice:{n:"L'Esploratrice",d:'Si muove e prosciuga anche in diagonale.'},
+  ingegnere:{n:"L'Ingegnere",d:'Con una sola azione prosciuga due isole.'},
+  pilota:{n:'Il Pilota',d:'Una volta per turno vola su qualsiasi isola (1 azione).'},
+  navigatrice:{n:'La Navigatrice',d:'Con 1 azione sposta il compagno di una o due isole.'},
+  messaggera:{n:'La Messaggera',d:'Dona carte al compagno a qualsiasi distanza.'}
+};
+const LEVELS={
+  base:{n:'Base',storm:0,tempeste:3,need:3,give:1,filo:2},
+  avanzato:{n:'Avanzato',storm:1,tempeste:4,need:4,give:0,filo:1}
+};
+const TRACK=[2,2,2,3,3,3,4,4,5];
+const SKULL=TRACK.length, HAND=5, FILO_MAX=3, MOLO=0;
+const TILE_DEFS=[
+  {name:'Il Molo',molo:1},
+  {name:"Cava d'Ambra",gem:'ambra'},{name:"Torre d'Ambra",gem:'ambra'},
+  {name:'Grotta di Corallo',gem:'corallo'},{name:'Secca di Corallo',gem:'corallo'},
+  {name:'Bosco di Giada',gem:'giada'},{name:'Giardino di Giada',gem:'giada'},
+  {name:'Laguna di Zaffiro',gem:'zaffiro'},{name:'Faro di Zaffiro',gem:'zaffiro'},
+  ...['Vrångö','Styrsö','Brännö','Donsö','Vinga','Känsö','Procida','Capraia','Ponza','Giglio','Lipari','Favignana'].map(n=>({name:n}))
+];
+const clone=o=>JSON.parse(JSON.stringify(o));
+const other=x=>x==='A'?'B':'A';
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function pname(s,x){return (s.seats&&s.seats[x]&&s.seats[x].name)||(x==='A'?'Giocatore 1':'Giocatore 2')}
+function roleOf(s,x){return s.seats&&s.seats[x]?s.seats[x].role:null}
+function log(s,m){s.log.push(m);if(s.log.length>40)s.log.splice(0,s.log.length-40)}
+function cardName(c){if(!c)return'';if(c.startsWith('g:'))return GEM_NAME[c.slice(2)];return c==='sacchi'?'Sacchi di sabbia':c==='vento'?'Raffica di vento':'Tempesta'}
+function emptyLobby(){return{v:1,rev:0,status:'lobby',level:'base',seats:{A:null,B:null}}}
+function lobbyFrom(s){return{v:1,rev:s.rev||0,status:'lobby',level:s.level,seats:clone(s.seats)}}
+function lobbyReady(s){const a=s.seats.A,b=s.seats.B;return !!(a&&b&&a.name&&b.name&&a.role&&b.role&&a.role!==b.role)}
+
+function newGame(prev){
+  const L=LEVELS[prev.level]||LEVELS.base;
+  const cells=[];
+  for(let r=0;r<5;r++)for(let c=0;c<5;c++){if((r===0||r===4)&&(c===0||c===4))continue;cells.push([r,c])}
+  shuffle(cells);
+  const tiles=TILE_DEFS.map((d,i)=>({id:i,name:d.name,gem:d.gem||null,molo:!!d.molo,r:cells[i][0],c:cells[i][1],s:2}));
+  const tDeck=[];
+  GEMS.forEach(g=>{for(let k=0;k<5;k++)tDeck.push('g:'+g)});
+  tDeck.push('sacchi','sacchi','vento','vento');
+  shuffle(tDeck);
+  const hands={A:tDeck.splice(0,2),B:tDeck.splice(0,2)};
+  for(let k=0;k<L.tempeste;k++)tDeck.push('tempesta');
+  shuffle(tDeck);
+  const first=Math.random()<.5?'A':'B';
+  const s={v:1,rev:prev.rev||0,status:'playing',level:prev.level in LEVELS?prev.level:'base',seats:clone(prev.seats),
+    tiles,pos:{A:MOLO,B:MOLO},hands,tDeck,tDisc:[],fDeck:shuffle(tiles.map(t=>t.id)),fDisc:[],
+    storm:L.storm,filo:L.filo,gems:{ambra:false,corallo:false,giada:false,zaffiro:false},
+    turn:first,actions:3,phase:'actions',fl:{pilot:false,eng:false,extra:false,gain:false},argine:false,
+    log:[],lastFlood:[],turnNo:1,startedAt:Date.now(),endedAt:null,reason:''};
+  const lf=[];
+  for(let k=0;k<6;k++){const id=s.fDeck.pop();s.tiles[id].s=1;s.fDisc.push(id);lf.push(id)}
+  s.lastFlood=lf;
+  log(s,'Si allagano: '+lf.map(id=>s.tiles[id].name).join(', ')+'.');
+  log(s,`Turno 1: inizia ${pname(s,first)}.`);
+  return s;
+}
+
+function adj(a,b,diag){const dr=Math.abs(a.r-b.r),dc=Math.abs(a.c-b.c);return diag?Math.max(dr,dc)===1:dr+dc===1}
+function neighbors(s,id,diag){const t=s.tiles[id];return s.tiles.filter(u=>u.s>0&&u.id!==id&&adj(t,u,diag)).map(u=>u.id)}
+function within2(s,id){const seen=new Set([id]);let f=[id];for(let d=0;d<2;d++){const n=[];f.forEach(x=>neighbors(s,x,false).forEach(y=>{if(!seen.has(y)){seen.add(y);n.push(y)}}));f=n}seen.delete(id);return[...seen]}
+
+function targets(s,x,mode){
+  if(!s||s.status!=='playing')return[];
+  const me=s.pos[x],diag=roleOf(s,x)==='esploratrice',can=s.phase==='actions'&&s.actions>0;
+  switch(mode){
+    case'move':return can?neighbors(s,me,diag):[];
+    case'dry':if(s.phase!=='actions'||(s.actions<=0&&!s.fl.eng))return[];return[me,...neighbors(s,me,diag)].filter(id=>s.tiles[id].s===1);
+    case'fly':return can&&roleOf(s,x)==='pilota'&&!s.fl.pilot?s.tiles.filter(t=>t.s>0&&t.id!==me).map(t=>t.id):[];
+    case'nav':return can&&roleOf(s,x)==='navigatrice'?within2(s,s.pos[other(x)]):[];
+    case'sacchi':return s.tiles.filter(t=>t.s===1).map(t=>t.id);
+    case'vento':return s.tiles.filter(t=>t.s>0&&t.id!==me).map(t=>t.id);
+  }
+  return[];
+}
+function lose(s,r){s.status='lost';s.reason=r;s.endedAt=Date.now()}
+function checkWin(s){
+  if(s.status!=='playing')return false;
+  if(GEMS.every(g=>s.gems[g])&&s.pos.A===MOLO&&s.pos.B===MOLO){
+    s.status='won';s.endedAt=Date.now();s.reason='Avete recuperato le quattro Lenti e siete salpati insieme dal Molo.';
+    log(s,'Il faro si riaccende. Vittoria!');return true}
+  return false;
+}
+function doMove(s,id){const x=s.turn;if(!targets(s,x,'move').includes(id))return false;s.pos[x]=id;s.actions--;s.fl.eng=false;log(s,`${pname(s,x)} va a ${s.tiles[id].name}.`);return true}
+function doDry(s,id){const x=s.turn;if(!targets(s,x,'dry').includes(id))return false;
+  if(s.fl.eng){s.fl.eng=false}else{s.actions--;if(roleOf(s,x)==='ingegnere')s.fl.eng=true}
+  s.tiles[id].s=2;log(s,`${pname(s,x)} prosciuga ${s.tiles[id].name}.`);return true}
+function doFly(s,id){const x=s.turn;if(!targets(s,x,'fly').includes(id))return false;s.pos[x]=id;s.actions--;s.fl.pilot=true;s.fl.eng=false;log(s,`${pname(s,x)} vola fino a ${s.tiles[id].name}.`);return true}
+function doNav(s,id){const x=s.turn,o=other(x);if(!targets(s,x,'nav').includes(id))return false;s.pos[o]=id;s.actions--;s.fl.eng=false;log(s,`${pname(s,x)} guida ${pname(s,o)} fino a ${s.tiles[id].name}.`);return true}
+function afterHandChange(s){if(s.phase==='discard'&&s.hands[s.turn].length<=HAND){if(!checkWin(s))finishTurn(s)}}
+function doSpecial(s,i,id){const x=s.turn,c=s.hands[x][i];if(c!=='sacchi'&&c!=='vento')return false;if(!targets(s,x,c).includes(id))return false;
+  s.hands[x].splice(i,1);s.tDisc.push(c);
+  if(c==='sacchi'){s.tiles[id].s=2;log(s,`${pname(s,x)} usa i Sacchi di sabbia su ${s.tiles[id].name}.`)}
+  else{s.pos[x]=id;log(s,`Una Raffica di vento porta ${pname(s,x)} a ${s.tiles[id].name}.`)}
+  afterHandChange(s);return true}
+function giveCheck(s){
+  const x=s.turn,o=other(x);
+  if(s.phase!=='actions'||s.actions<=0)return'Non hai più azioni.';
+  if(s.hands[o].length>=HAND)return`La mano di ${pname(s,o)} è piena.`;
+  if(roleOf(s,x)==='messaggera')return'';
+  const a=s.tiles[s.pos[x]],b=s.tiles[s.pos[o]],d=Math.abs(a.r-b.r)+Math.abs(a.c-b.c),g=LEVELS[s.level].give;
+  if(d>g)return g===0?'Per donare dovete essere sulla stessa isola.':'Per donare dovete essere sulla stessa isola o su isole vicine.';
+  return'';
+}
+function doGive(s,i){const x=s.turn,o=other(x),c=s.hands[x][i];if(!c||!c.startsWith('g:')||giveCheck(s))return false;
+  s.hands[x].splice(i,1);s.hands[o].push(c);s.actions--;s.fl.eng=false;
+  log(s,`${pname(s,x)} dona un Frammento di ${cardName(c)} a ${pname(s,o)}.`);
+  if(!s.fl.gain&&s.filo<FILO_MAX){s.filo++;s.fl.gain=true;log(s,'Il dono stringe il Filo Rosso: +1.')}
+  return true}
+function claimInfo(s){const x=s.turn,t=s.tiles[s.pos[x]];if(!t.gem||s.gems[t.gem])return null;const need=LEVELS[s.level].need;
+  const have=s.hands[x].filter(c=>c==='g:'+t.gem).length;return{gem:t.gem,need,have,ok:have>=need&&s.actions>0&&s.phase==='actions'}}
+function doClaim(s){const ci=claimInfo(s);if(!ci||!ci.ok)return false;const x=s.turn;let k=ci.need;
+  s.hands[x]=s.hands[x].filter(c=>{if(k>0&&c==='g:'+ci.gem){k--;s.tDisc.push(c);return false}return true});
+  s.gems[ci.gem]=true;s.actions--;s.fl.eng=false;log(s,`${pname(s,x)} recupera la Lente di ${GEM_NAME[ci.gem]}!`);return true}
+function doExtra(s){if(s.phase!=='actions'||s.filo<=0||s.fl.extra)return false;s.filo--;s.fl.extra=true;s.actions++;log(s,`${pname(s,s.turn)} tira il Filo Rosso: un'azione in più.`);return true}
+function drawT(s){if(!s.tDeck.length){s.tDeck=shuffle(s.tDisc);s.tDisc=[]}const v=s.tDeck.pop();return v===undefined?null:v}
+function drawF(s){if(!s.fDeck.length){s.fDeck=shuffle(s.fDisc);s.fDisc=[]}const v=s.fDeck.pop();return v===undefined?null:v}
+function rescue(s,x,from){
+  const role=roleOf(s,x);
+  const opts=role==='pilota'?s.tiles.filter(t=>t.s>0).map(t=>t.id):neighbors(s,from,role==='esploratrice');
+  if(!opts.length){lose(s,`${pname(s,x)} non ha più terra su cui nuotare.`);return}
+  const m=s.tiles[MOLO],dist=id=>Math.abs(s.tiles[id].r-m.r)+Math.abs(s.tiles[id].c-m.c);
+  opts.sort((a,b)=>dist(a)-dist(b)||s.tiles[b].s-s.tiles[a].s);
+  s.pos[x]=opts[0];log(s,`${pname(s,x)} si salva a nuoto su ${s.tiles[opts[0]].name}.`);
+}
+function floodTile(s,id){
+  const t=s.tiles[id];
+  if(t.s===2){t.s=1;s.fDisc.push(id);log(s,`${t.name} si allaga.`);return}
+  if(t.s!==1)return;
+  t.s=0;log(s,`${t.name} sprofonda!`);
+  if(t.molo){lose(s,"Il Molo è sprofondato: non c'è più modo di salpare.");return}
+  if(t.gem&&!s.gems[t.gem]&&s.tiles.filter(u=>u.gem===t.gem).every(u=>u.s===0)){lose(s,`Sono sprofondati entrambi i santuari della Lente di ${GEM_NAME[t.gem]}.`);return}
+  for(const x of['A','B']){if(s.status!=='playing')return;if(s.pos[x]===id)rescue(s,x,id)}
+}
+function finishTurn(s){
+  const n=Math.max(1,TRACK[s.storm]-(s.argine?1:0));const lf=[];
+  for(let k=0;k<n&&s.status==='playing';k++){const id=drawF(s);if(id===null)break;lf.push(id);floodTile(s,id)}
+  s.lastFlood=lf;s.argine=false;
+  if(s.status!=='playing')return;
+  s.turn=other(s.turn);s.actions=3;s.phase='actions';s.fl={pilot:false,eng:false,extra:false,gain:false};s.turnNo++;
+  log(s,`Turno ${s.turnNo}: tocca a ${pname(s,s.turn)}.`);
+}
+function doEndTurn(s,argine){
+  if(s.phase!=='actions'||s.status!=='playing')return false;
+  const x=s.turn,nm=pname(s,x);s.fl.eng=false;
+  if(argine){if(s.filo<=0)return false;s.filo--;s.argine=true;log(s,`${nm} usa un Filo Rosso per l'Argine: una carta Inondazione in meno.`)}
+  if(s.pos.A===s.pos.B&&!s.fl.gain&&s.filo<FILO_MAX){s.filo++;s.fl.gain=true;log(s,'Finite il turno sulla stessa isola: +1 Filo Rosso.')}
+  const got=[];
+  for(let k=0;k<2;k++){
+    const c=drawT(s);if(!c)break;
+    if(c==='tempesta'){
+      s.tDisc.push(c);s.storm++;s.fDeck.push(...shuffle(s.fDisc));s.fDisc=[];
+      if(s.storm>=SKULL){log(s,'Tempesta! La marea travolge tutto.');lose(s,'La marea ha raggiunto il teschio.');return true}
+      log(s,`Tempesta! La marea sale: ora ${TRACK[s.storm]} carte Inondazione a turno.`);
+    }else{s.hands[x].push(c);got.push(cardName(c))}
+  }
+  if(got.length)log(s,`${nm} pesca ${got.join(' e ')}.`);
+  if(s.hands[x].length>HAND){s.phase='discard';log(s,`${nm} deve scartare ${s.hands[x].length-HAND} ${s.hands[x].length-HAND===1?'carta':'carte'}.`);return true}
+  finishTurn(s);return true;
+}
+function doDiscard(s,i){if(s.phase!=='discard')return false;const x=s.turn,c=s.hands[x][i];if(!c)return false;
+  s.hands[x].splice(i,1);s.tDisc.push(c);log(s,`${pname(s,x)} scarta ${cardName(c)}.`);afterHandChange(s);return true}
+</script>
+<script>
+/* ===== Interfaccia e rete (MQTT pubblico, nessun account) ===== */
+const app=document.getElementById('app'),toastEl=document.getElementById('toast');
+const BROKERS=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt'];
+const PREFIX='fari-tempesta/v1/';
+let S=null,LOCAL=false,room=null,client=null,net='off',pendingRender=false,gotState=false,remoteRev=0;
+const readOnly=false;
+const ui={mode:'move',cardIdx:-1,confirmQuit:false,draft:{A:'',B:''},joinCode:'',flashUntil:0,turnKey:''};
+const DEV=(()=>{const mk=()=>'d'+Math.random().toString(36).slice(2,11);try{let d=localStorage.getItem('faro.dev');if(!d){d=mk();localStorage.setItem('faro.dev',d)}return d}catch(e){return mk()}})();
+const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function mySeat(){if(!S||!S.seats)return null;if(LOCAL)return S.status==='playing'?S.turn:null;
+  if(S.seats.A&&S.seats.A.device===DEV)return'A';if(S.seats.B&&S.seats.B.device===DEV)return'B';return null}
+function canAct(){return !!(S&&S.status==='playing'&&(LOCAL||mySeat()===S.turn))}
+function canEditLobby(){return !!S}
+function toast(msg,love){const d=document.createElement('div');d.className='t'+(love?' love':'');d.textContent=msg;toastEl.appendChild(d);setTimeout(()=>d.remove(),3200)}
+
+/* ---- memoria locale ---- */
+const cacheKey=()=>LOCAL?'faro.local':'faro.room.'+room;
+function saveCache(){try{localStorage.setItem(cacheKey(),JSON.stringify(S))}catch(e){}}
+function loadCache(){try{const s=JSON.parse(localStorage.getItem(cacheKey())||'null');return s&&s.v===1&&s.seats?s:null}catch(e){return null}}
+
+/* ---- salvataggio e invio ---- */
+function commit(s){
+  const prev=S;s.rev=((S&&S.rev)||0)+1;s.by=DEV;S=s;
+  if(prev&&prev.status==='playing'&&(prev.turnNo!==s.turnNo||s.status!=='playing'))flash();
+  normalizeMode();render(true);saveCache();
+  if(!LOCAL)publishState();
+}
+function publishState(){
+  if(!client||!room||!S)return;
+  try{client.publish(PREFIX+room+'/state',JSON.stringify(S),{qos:1,retain:true})}catch(e){toast('Mossa non inviata: controlla la connessione.')}
+}
+function flash(){ui.flashUntil=Date.now()+1700;setTimeout(()=>render(),1800)}
+function act(fn){if(!canAct())return;const s=clone(S);if(!fn(s))return;if(s.status==='playing')checkWin(s);commit(s)}
+
+function normalizeMode(){
+  if(!S||S.status!=='playing')return;
+  const key=S.turnNo+':'+S.turn;if(key!==ui.turnKey){ui.turnKey=key;ui.mode='move';ui.cardIdx=-1;ui.confirmQuit=false}
+  const x=S.turn,h=S.hands[x];
+  if(ui.mode==='sacchi'||ui.mode==='vento'){if(h[ui.cardIdx]!==ui.mode){ui.mode=S.phase==='discard'?null:'move';ui.cardIdx=-1}return}
+  if(S.phase==='discard'){ui.mode=null;return}
+  if(ui.mode==='give'){if(giveCheck(S)||!h.some(c=>c.startsWith('g:')))ui.mode='move';return}
+  if(!ui.mode||!targets(S,x,ui.mode).length)ui.mode='move';
+}
+
+/* ---- stanze ---- */
+function roomFromHash(){const h=decodeURIComponent(location.hash.slice(1)).toUpperCase().replace(/[^A-Z0-9-]/g,'');return h.length>=4&&h.length<=24?h:null}
+function genCode(){const w=['FARO','ONDA','MOLO','VELA','PERLA','AMBRA','GIADA','SCOGLIO','MAREA','BREZZA','RIVA','BOA'];return w[Math.floor(Math.random()*w.length)]+'-'+(1000+Math.floor(Math.random()*9000))}
+function shareUrl(){return location.origin+location.pathname+'#'+room}
+function closeClient(){if(client){try{client.end(true)}catch(e){}}client=null}
+
+function joinRoom(code,isNew){
+  closeClient();LOCAL=false;room=code;gotState=false;remoteRev=0;
+  if(location.hash.slice(1)!==code)history.replaceState(null,'','#'+code);
+  S=isNew?emptyLobby():loadCache();
+  ui.turnKey='';normalizeMode();render(true);
+  connect(0,isNew,code);
+}
+function connect(i,isNew,code){
+  if(code!==room)return;
+  if(typeof mqtt==='undefined'){net='nolib';if(!S)S=emptyLobby();render(true);return}
+  if(i>=BROKERS.length){net='fail';if(!S)S=emptyLobby();render(true);return}
+  net='connecting';render(true);
+  let c,opened=false;
+  try{c=mqtt.connect(BROKERS[i],{clientId:'fari_'+Math.random().toString(36).slice(2,12),clean:true,connectTimeout:8000,reconnectPeriod:3000,keepalive:30})}
+  catch(e){connect(i+1,isNew,code);return}
+  const timer=setTimeout(()=>{if(!opened){try{c.end(true)}catch(e){}connect(i+1,isNew,code)}},9000);
+  c.on('connect',()=>{
+    if(code!==room){try{c.end(true)}catch(e){}return}
+    opened=true;clearTimeout(timer);client=c;net='on';
+    c.subscribe([PREFIX+room+'/state',PREFIX+room+'/signal'],{qos:1});
+    render();
+    setTimeout(()=>{
+      if(c!==client)return;
+      if(!gotState){if(!S)S=emptyLobby();if(isNew||S.rev>0){commit(clone(S));isNew=false}else render()}
+      else if(S&&S.rev>remoteRev)publishState();
+    },2500);
+  });
+  c.on('message',(topic,buf)=>{
+    if(c!==client)return;let d;
+    try{d=JSON.parse(typeof buf==='string'?buf:new TextDecoder().decode(buf))}catch(e){return}
+    if(topic.endsWith('/state'))onState(d);else onSignal(d);
+  });
+  c.on('offline',()=>{if(c===client){net='retry';render()}});
+  c.on('reconnect',()=>{if(c===client){net='retry';render()}});
+  c.on('error',()=>{});
+}
+function onState(d){
+  if(!d||d.v!==1||!d.seats)return;
+  remoteRev=Math.max(remoteRev,d.rev||0);gotState=true;
+  if(S&&!(d.rev>S.rev||(d.rev===S.rev&&(d.by||'')>(S.by||'')))){render();return}
+  const prev=S;S=d;
+  if(prev&&prev.status==='playing'&&S.status==='playing'&&prev.turnNo!==S.turnNo){flash();if(S.turn===mySeat())toast('Tocca a te!')}
+  if(prev&&prev.status==='playing'&&S.status!=='playing')flash();
+  saveCache();normalizeMode();render();
+}
+function onSignal(d){
+  if(!d||d.dev===DEV||typeof d.t!=='string')return;
+  const who=(S&&S.seats&&S.seats[d.from]&&S.seats[d.from].name)||'Compagno';
+  toast(`${who}: ${d.t.slice(0,30)}`,d.t==='♥');
+}
+function react(t){
+  toast(LOCAL?t:`Tu: ${t}`,t==='♥');
+  if(LOCAL||!client)return;
+  try{client.publish(PREFIX+room+'/signal',JSON.stringify({from:mySeat(),t,dev:DEV,at:Date.now()}),{qos:0})}catch(e){}
+}
+function goLocal(){closeClient();room=null;LOCAL=true;history.replaceState(null,'',location.pathname+location.search);S=loadCache()||emptyLobby();ui.turnKey='';normalizeMode();render(true)}
+function goHome(){closeClient();room=null;LOCAL=false;S=null;net='off';history.replaceState(null,'',location.pathname+location.search);render(true)}
+
+/* ---- comandi ---- */
+const H={
+  create(){joinRoom(genCode(),true)},
+  join(){const c=(ui.joinCode||'').toUpperCase().replace(/[^A-Z0-9-]/g,'');if(c.length<4){toast('Scrivi il codice che ti hanno mandato.');return}ui.joinCode='';joinRoom(c,false)},
+  leave(){goHome()},
+  local(){goLocal()},
+  copy(){const u=shareUrl();const done=()=>toast('Link copiato: mandalo a chi gioca con te.');
+    try{navigator.clipboard.writeText(u).then(done,()=>selectLink())}catch(e){selectLink()}},
+  sit({seat}){if(!canEditLobby())return;const name=(ui.draft[seat]||'').trim().slice(0,18);if(!name){toast('Scrivi prima il tuo nome.');return}
+    const s=clone(S),o=other(seat);if(!LOCAL&&s.seats[o]&&s.seats[o].device===DEV)s.seats[o]=null;
+    s.seats[seat]={device:LOCAL?'local':DEV,name,role:null};ui.draft[seat]='';commit(s)},
+  stand({seat}){if(!canEditLobby())return;const s=clone(S);ui.draft[seat]=s.seats[seat]?s.seats[seat].name:'';s.seats[seat]=null;commit(s)},
+  reclaim({seat}){if(!canEditLobby())return;const s=clone(S),o=other(seat);if(s.seats[o]&&s.seats[o].device===DEV)s.seats[o].device='libero';s.seats[seat].device=DEV;commit(s)},
+  role({seat,r}){if(!canEditLobby()||!ROLES[r])return;const s=clone(S),o=other(seat);if(!s.seats[seat]||(s.seats[o]&&s.seats[o].role===r))return;s.seats[seat].role=r;commit(s)},
+  level({lv}){if(!canEditLobby()||!LEVELS[lv]||S.level===lv)return;const s=clone(S);s.level=lv;commit(s)},
+  start(){if(!canEditLobby()||!lobbyReady(S))return;commit(newGame(S))},
+  mode({m}){if(!canAct())return;ui.mode=(ui.mode===m&&m!=='move')?'move':m;ui.cardIdx=-1;render(true)},
+  tile({id}){id=+id;const m=ui.mode,ci=ui.cardIdx;act(s=>{switch(m){case'move':return doMove(s,id);case'dry':return doDry(s,id);case'fly':return doFly(s,id);case'nav':return doNav(s,id);case'sacchi':case'vento':return doSpecial(s,ci,id)}return false})},
+  card({seat,i}){i=+i;if(!canAct()||seat!==S.turn)return;const c=S.hands[seat][i];if(!c)return;
+    if(c==='sacchi'||c==='vento'){if(ui.mode===c&&ui.cardIdx===i){ui.mode=S.phase==='discard'?null:'move';ui.cardIdx=-1}else{ui.mode=c;ui.cardIdx=i}render(true);return}
+    if(S.phase==='discard'){act(s=>doDiscard(s,i));return}
+    if(ui.mode==='give'){act(s=>doGive(s,i));return}
+    toast('Per donare questa carta premi prima «Dona».')},
+  claim(){act(doClaim)},
+  extra(){act(doExtra)},
+  end(){act(s=>doEndTurn(s,false))},
+  endArgine(){act(s=>doEndTurn(s,true))},
+  discardSel(){const i=ui.cardIdx;act(s=>doDiscard(s,i))},
+  cancel(){ui.mode=S.phase==='discard'?null:'move';ui.cardIdx=-1;render(true)},
+  react({t}){react(t)},
+  quit(){ui.confirmQuit=true;render(true)},
+  quitNo(){ui.confirmQuit=false;render(true)},
+  quitYes(){ui.confirmQuit=false;commit(lobbyFrom(S))},
+  again(){commit(newGame(S))},
+  toLobby(){commit(lobbyFrom(S))},
+};
+function selectLink(){const el=document.getElementById('sharelink');if(el){const r=document.createRange();r.selectNodeContents(el);const sel=getSelection();sel.removeAllRanges();sel.addRange(r)}toast('Copia il link selezionato.')}
+app.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||b.disabled||!app.contains(b))return;const f=H[b.dataset.a];if(f)f(b.dataset)});
+app.addEventListener('input',e=>{const t=e.target;if(!t.hasAttribute||!t.hasAttribute('data-keep'))return;if(t.dataset.seat)ui.draft[t.dataset.seat]=t.value;if(t.hasAttribute('data-join'))ui.joinCode=t.value});
+app.addEventListener('keydown',e=>{const t=e.target;if(e.key!=='Enter'||!t.hasAttribute||!t.hasAttribute('data-keep'))return;e.preventDefault();if(t.hasAttribute('data-join'))H.join();else H.sit({seat:t.dataset.seat})});
+app.addEventListener('focusout',()=>{setTimeout(()=>{if(pendingRender)render()},350)});
+window.addEventListener('hashchange',()=>{const c=roomFromHash();if(c&&c!==room)joinRoom(c,false)});
+
+/* ---- rendering ---- */
+function render(force){
+  const ae=document.activeElement;
+  if(!force&&ae&&ae.hasAttribute&&ae.hasAttribute('data-keep')&&app.contains(ae)){pendingRender=true;return}
+  pendingRender=false;
+  if(!room&&!LOCAL){app.innerHTML=homeHTML();return}
+  if(!S){app.innerHTML=heroHTML()+modeLine();return}
+  app.innerHTML=S.status==='lobby'?lobbyHTML():gameHTML();
+  tick();
+}
+function heroHTML(){return`<header class="hero"><div class="beam" aria-hidden="true"></div>
+  <p class="eyebrow">Gioco cooperativo per due · 15–20 minuti</p>
+  <h1>Fari nella <span>Tempesta</span></h1>
+  <p class="lede">L'arcipelago tra Göteborg e il Tirreno sta affondando. Recuperate insieme le quattro Lenti del faro e tornate al Molo prima che la marea si prenda tutto. Si vince e si perde in due.</p></header>`}
+function homeHTML(){
+  return heroHTML()+`<div class="seats">
+    <section class="seat"><div class="seat-head"><h3>Nuova partita</h3></div><p class="note">Crea una stanza e manda il link a chi gioca con te. Nessuna registrazione.</p><div class="row"><button class="btn primary" data-a="create">Crea una partita</button></div></section>
+    <section class="seat"><div class="seat-head"><h3>Ho un codice</h3></div><div class="row"><input type="text" id="joincode" data-keep data-join maxlength="24" placeholder="Es. ONDA-4821" value="${esc(ui.joinCode)}" autocomplete="off" autocapitalize="characters"><button class="btn primary" data-a="join">Entra</button></div><p class="note">Se ti hanno mandato un link, aprilo e basta.</p></section>
+  </div><div class="start"><p class="note">Siete nella stessa stanza? <button class="linkish" data-a="local">Giocate su un solo dispositivo</button>.</p></div>`+rulesHTML(false);
+}
+function netText(){return{on:'collegati',connecting:'collegamento in corso…',retry:'connessione persa, riprovo…',fail:'server non raggiungibile: controlla internet e ricarica',nolib:'componente di rete non caricato: ricarica la pagina',off:''}[net]||''}
+function modeLine(){
+  if(LOCAL)return`<div class="status-line"><span>Un solo dispositivo: passatevi lo schermo a turno.</span><button class="linkish" data-a="leave">Torna all'inizio</button></div>`;
+  return`<div class="status-line${net==='fail'||net==='nolib'||net==='retry'?' warn':''}"><span>Stanza <strong class="mono">${esc(room)}</strong> · ${esc(netText())}</span>
+    <button class="btn" data-a="copy">Copia il link d'invito</button><span class="mono note" id="sharelink" style="overflow-wrap:anywhere">${esc(shareUrl())}</span>
+    <button class="linkish" data-a="leave">Esci dalla stanza</button></div>`;
+}
+function seatHTML(seat){
+  const st=S.seats[seat],o=S.seats[other(seat)],label=seat==='A'?'Posto 1':'Posto 2';
+  const mine=LOCAL||(st&&st.device===DEV);
+  let body='';
+  if(!st){
+    body=`<div class="row"><input type="text" id="name${seat}" data-keep data-seat="${seat}" maxlength="18" placeholder="Il tuo nome" value="${esc(ui.draft[seat])}" autocomplete="off">
+      <button class="btn primary" data-a="sit" data-seat="${seat}">Siediti qui</button></div>
+      <p class="note">${LOCAL?'Scrivi il nome di chi gioca con questa pedina.':'Libero. Scrivi il tuo nome per sederti.'}</p>`;
+  }else if(mine){
+    body=`<div class="roles">${Object.entries(ROLES).map(([k,r])=>{const taken=o&&o.role===k;
+      return`<button class="btn" data-a="role" data-seat="${seat}" data-r="${k}" aria-pressed="${st.role===k}" ${taken?'disabled':''}>${esc(r.n)}<small>${taken?'Già scelto da '+esc(o.name):esc(r.d)}</small></button>`}).join('')}</div>
+      <div class="row"><span class="note">${st.role?'Ruolo scelto.':'Scegli un ruolo.'}</span><button class="linkish" data-a="stand" data-seat="${seat}">${LOCAL?'Cambia nome':'Lascia il posto'}</button></div>`;
+  }else{
+    body=`<p class="note">${st.role?esc(ROLES[st.role].n)+' — '+esc(ROLES[st.role].d):'Sta scegliendo il ruolo…'}</p>
+      <div class="row"><button class="linkish" data-a="reclaim" data-seat="${seat}">Sono io: riprendi questo posto</button></div>`;
+  }
+  return`<section class="seat"><div class="seat-head"><span class="dot ${seat}"></span><h3>${st?esc(st.name):'Libero'}</h3><span class="eyebrow">${label}${!LOCAL&&st&&st.device===DEV?' · tu':''}</span></div>${body}</section>`;
+}
+
+function levelsHTML(){
+  const L=[['base','Base',["La marea parte da 2 carte a turno","3 Tempeste nel mazzo","3 Frammenti per recuperare una Lente","Si dona sulla stessa isola o su quelle vicine","2 Fili Rossi in partenza"]],
+           ['avanzato','Avanzato',["La marea parte un gradino più in alto","4 Tempeste nel mazzo","4 Frammenti per recuperare una Lente","Si dona solo sulla stessa isola","1 Filo Rosso in partenza"]]];
+  return`<div class="levels">${L.map(([k,n,li])=>`<button class="level" data-a="level" data-lv="${k}" aria-pressed="${S.level===k}" ${canEditLobby()?'':'disabled'}><span class="eyebrow">Livello</span><h3>${n}</h3><ul>${li.map(x=>`<li>${x}</li>`).join('')}</ul></button>`).join('')}</div>`;
+}
+function lobbyHTML(){
+  const ready=lobbyReady(S);const a=S.seats.A,b=S.seats.B;
+  let why='';
+  if(!a||!b)why='Servono due giocatori seduti.';else if(!a.role||!b.role)why='Ognuno deve scegliere un ruolo.';else why='Pronti a salpare.';
+  return heroHTML()+modeLine()+`<div class="seats">${seatHTML('A')}${seatHTML('B')}</div>${levelsHTML()}
+    <div class="start"><button class="btn primary" data-a="start" ${ready&&canEditLobby()?'':'disabled'}>Inizia la partita</button><p class="note">${why}</p></div>`+rulesHTML(false);
+}
+
+function tileHTML(t,tg,recentSet,hit){
+  const isT=tg.has(t.id);const coord='ABCDE'[t.c]+(t.r+1);
+  const pawns=['A','B'].filter(x=>S.pos[x]===t.id).map(x=>`<span class="pawn ${x}" title="${esc(pname(S,x))}">${esc(pname(S,x).slice(0,1).toUpperCase())}</span>`).join('');
+  const inner=`<span class="co">${coord}</span>${t.gem?`<span class="gem g-${t.gem}${S.gems[t.gem]?' hollow':''}"></span>`:''}${t.molo?'<span class="molo">MOLO</span>':''}${pawns?`<span class="pawns">${pawns}</span>`:''}${t.s===1?'<span class="wet">allagata</span>':''}<span class="nm">${esc(t.name)}</span>`;
+  const cls=`cell tile s${t.s}${recentSet.has(t.id)?' recent':''}${hit&&recentSet.has(t.id)?' hit':''}`;
+  const lab=`${t.name}, ${coord}, ${t.s===1?'allagata':'asciutta'}${t.gem?', santuario della Lente di '+GEM_NAME[t.gem]:''}${t.molo?', il Molo':''}`;
+  return isT?`<button class="${cls}" data-a="tile" data-id="${t.id}" aria-label="${esc(lab)}">${inner}</button>`:`<div class="${cls}" aria-label="${esc(lab)}">${inner}</div>`;
+}
+function boardHTML(){
+  const tg=new Set(canAct()&&ui.mode?targets(S,S.turn,ui.mode):[]);
+  const recent=new Set(S.lastFlood||[]),hit=Date.now()<ui.flashUntil;
+  const map={};S.tiles.forEach(t=>{map[t.r*5+t.c]=t});
+  let h='<div class="board" role="grid" aria-label="Arcipelago">';
+  for(let r=0;r<5;r++)for(let c=0;c<5;c++){const t=map[r*5+c];
+    if(!t)h+='<div class="cell sea-cell"></div>';
+    else if(t.s===0)h+=`<div class="cell sea-cell" aria-label="${esc(t.name)}, sprofondata"><span class="ghost">${esc(t.name)}</span></div>`;
+    else h+=tileHTML(t,tg,recent,hit);}
+  return h+'</div>';
+}
+function hintText(){
+  if(S.status!=='playing')return'';
+  const x=S.turn,me=canAct();
+  if(!me)return`Guarda le mosse di ${esc(pname(S,x))} e dai consigli con le reazioni.`;
+  if(S.phase==='discard'){
+    if(ui.mode==='sacchi')return'Sacchi di sabbia: tocca un\'isola allagata per prosciugarla.';
+    if(ui.mode==='vento')return'Raffica di vento: tocca l\'isola dove vuoi andare.';
+    return`Hai più di ${HAND} carte: tocca una carta per scartarla (le carte speciali puoi anche giocarle).`}
+  const role=roleOf(S,x);
+  switch(ui.mode){
+    case'move':return S.actions>0?`Tocca un'isola evidenziata per spostarti${role==='esploratrice'?' (anche in diagonale)':''}.`:'Azioni finite. Puoi ancora giocare carte speciali, poi termina il turno.';
+    case'dry':return S.fl.eng?'Ingegnere: prosciuga una seconda isola gratis.':'Tocca un\'isola allagata evidenziata per prosciugarla.';
+    case'fly':return'Tocca qualsiasi isola per volarci.';
+    case'nav':return`Tocca l'isola dove portare ${esc(pname(S,other(x)))} (fino a due passi).`;
+    case'give':return`Tocca un Frammento della tua mano per donarlo a ${esc(pname(S,other(x)))}.`;
+    case'sacchi':return'Sacchi di sabbia: tocca qualsiasi isola allagata.';
+    case'vento':return'Raffica di vento: tocca l\'isola dove vuoi andare.';
+  }return'';
+}
+function bannerHTML(){
+  const x=S.turn,mine=canAct();
+  const who=LOCAL?`Tocca a ${esc(pname(S,x))}`:(mine?`Tocca a te, ${esc(pname(S,x))}`:`Tocca a ${esc(pname(S,x))}`);
+  let sub='';
+  if(S.phase==='discard'){const n=S.hands[x].length-HAND;sub=`Mano troppo piena: ${n===1?'una carta':n+' carte'} da scartare.`}
+  else sub=`${S.actions} ${S.actions===1?'azione rimasta':'azioni rimaste'} · ${esc(ROLES[roleOf(S,x)]?ROLES[roleOf(S,x)].n:'')}`;
+  return`<div class="banner${mine?' mine':''}"><span class="big">${who}</span><span class="sub">${sub}</span></div>`;
+}
+function statusHTML(){
+  const meter=[...TRACK,'☠'].map((v,i)=>`<span class="${i<S.storm?'past':''}${i===S.storm?' now':''}${i===SKULL?' skull':''}">${v}</span>`).join('');
+  const knots=[0,1,2].map(i=>`<span class="knot${i<S.filo?' on':''}"></span>`).join('');
+  const lenses=GEMS.map(g=>`<div class="lens g-${g}${S.gems[g]?' got':''}"><span class="gem${S.gems[g]?'':' hollow'}"></span>${GEM_NAME[g]}</div>`).join('');
+  const need=LEVELS[S.level].need;
+  return`<section class="panel" aria-label="Stato">
+    <div class="stat"><div class="lbl"><span>Marea</span><b>${TRACK[S.storm]} carte Inondazione a turno</b></div><div class="meter">${meter}</div></div>
+    <div class="stat"><div class="lbl"><span>Filo Rosso</span><b>${S.filo} di ${FILO_MAX}</b></div><div class="filo-track">${knots}</div></div>
+    <div class="stat"><div class="lbl"><span>Lenti del faro</span><b>${GEMS.filter(g=>S.gems[g]).length} di 4 · servono ${need} Frammenti</b></div><div class="lenses">${lenses}</div></div>
+    <div class="decks mono">Mazzo Tesoro ${S.tDeck.length} · Inondazione ${S.fDeck.length} · scarti ${S.fDisc.length}</div></section>`;
+}
+function actionsHTML(){
+  const me=canAct(),x=S.turn,role=roleOf(S,x),hand=S.hands[x];
+  if(S.phase==='discard'){
+    const sp=ui.mode==='sacchi'||ui.mode==='vento';
+    return`<section class="panel"><h3>Scarta</h3><p class="reason">${me?'Tocca una carta nella tua mano qui sotto.':'In attesa che '+esc(pname(S,x))+' scarti.'}</p>
+      ${sp&&me?`<div class="endrow"><button class="btn" data-a="discardSel">Scarta ${esc(cardName(ui.mode))}</button><button class="btn ghost" data-a="cancel">Annulla</button></div>`:''}</section>`;
+  }
+  const b=(m,label,sub,ok)=>`<button class="btn" data-a="mode" data-m="${m}" aria-pressed="${me&&ui.mode===m}" ${me&&ok?'':'disabled'}>${label}${sub?`<small>${sub}</small>`:''}</button>`;
+  const hasGem=hand.some(c=>c.startsWith('g:'));const gc=giveCheck(S);
+  let h=b('move','Muovi','',targets(S,x,'move').length)+b('dry','Prosciuga',role==='ingegnere'?'due isole, 1 azione':'',targets(S,x,'dry').length)+b('give','Dona','a '+esc(pname(S,other(x))),hasGem&&!gc);
+  if(role==='pilota')h+=b('fly','Vola',S.fl.pilot?'già usato':'una volta a turno',targets(S,x,'fly').length);
+  if(role==='navigatrice')h+=b('nav','Guida',esc(pname(S,other(x))),targets(S,x,'nav').length);
+  const ci=claimInfo(S);
+  if(ci)h+=`<button class="btn wide" data-a="claim" ${me&&ci.ok?'':'disabled'}>Recupera la Lente di ${GEM_NAME[ci.gem]}<small>${ci.have} di ${ci.need} Frammenti in mano</small></button>`;
+  const reasons=[];if(hasGem&&gc&&S.actions>0)reasons.push(gc);
+  const end=`<div class="endrow">
+    <button class="btn filo" data-a="extra" ${me&&S.filo>0&&!S.fl.extra?'':'disabled'}>+1 azione<small>costa 1 Filo Rosso</small></button>
+    <button class="btn filo" data-a="endArgine" ${me&&S.filo>0?'':'disabled'}>Fine turno con Argine<small>1 Filo: un'Inondazione in meno</small></button>
+    <button class="btn primary" data-a="end" ${me?'':'disabled'}>Fine turno<small>pesca 2, poi ${TRACK[S.storm]} Inondazioni</small></button></div>`;
+  const sp=(ui.mode==='sacchi'||ui.mode==='vento')&&me?`<button class="btn ghost wide" data-a="cancel">Annulla ${esc(cardName(ui.mode))}</button>`:'';
+  return`<section class="panel" aria-label="Azioni"><h3>Azioni</h3><div class="actions">${h}${sp}</div>${reasons.length?`<p class="reason">${esc(reasons[0])}</p>`:''}${end}</section>`;
+}
+function cardHTML(seat,c,i,live){
+  const gem=c.startsWith('g:')?c.slice(2):null;const cls=gem?`g-${gem}`:`sp-${c}`;
+  const pick=live&&((ui.mode==='give'&&gem)||(S.phase==='discard'));const sel=live&&ui.cardIdx===i&&(ui.mode===c);
+  const kind=gem?'Frammento':'Speciale';
+  const inner=`<span class="band">${gem?'<span class="gem"></span>':''}</span><span class="cn">${esc(cardName(c))}</span><span class="ck">${kind}</span>`;
+  return live?`<button class="card ${cls} live${pick?' pick':''}${sel?' sel':''}" data-a="card" data-seat="${seat}" data-i="${i}" aria-label="${esc(cardName(c))}">${inner}</button>`:`<div class="card ${cls}">${inner}</div>`;
+}
+function handHTML(seat){
+  const st=S.seats[seat],role=ROLES[st&&st.role]||{n:'',d:''};const live=canAct()&&S.turn===seat;
+  const you=!LOCAL&&mySeat()===seat;const h=S.hands[seat];
+  return`<section class="panel"><div class="hand-head"><span class="dot ${seat}"></span><strong>${esc(pname(S,seat))}${you?' (tu)':''}</strong><span class="role">${esc(role.n)} · ${esc(role.d)}</span><span class="mono note" style="margin-left:auto">${h.length}/${HAND}</span></div>
+    <div class="cards">${h.length?h.map((c,i)=>cardHTML(seat,c,i,live)).join(''):'<span class="empty-hand">Nessuna carta.</span>'}</div></section>`;
+}
+function endHTML(){
+  if(S.status!=='won'&&S.status!=='lost')return'';
+  const won=S.status==='won';const dur=S.endedAt&&S.startedAt?Math.max(0,Math.round((S.endedAt-S.startedAt)/1000)):0;
+  return`<div class="overlay" role="dialog" aria-modal="true"><div class="end-card ${won?'won':'lost'}"><p class="eyebrow">${won?'Vittoria':'Sconfitta'} · livello ${LEVELS[S.level].n}</p>
+    <h2>${won?'Il faro è di nuovo acceso':"L'arcipelago è perduto"}</h2><p>${esc(S.reason)}</p>
+    <p class="mono note">${S.turnNo} turni · ${Math.floor(dur/60)} min ${dur%60} s · Lenti ${GEMS.filter(g=>S.gems[g]).length}/4</p>
+    <div class="endrow"><button class="btn primary" data-a="again" ${readOnly?'disabled':''}>Rigioca</button><button class="btn" data-a="toLobby" ${readOnly?'disabled':''}>Cambia ruoli o livello</button></div></div></div>`;
+}
+function gameHTML(){
+  const order=LOCAL?[S.turn,other(S.turn)]:(mySeat()?[mySeat(),other(mySeat())]:['A','B']);
+  const logs=S.log.slice(-12).reverse().map(l=>`<li>${esc(l)}</li>`).join('');
+  const quit=ui.confirmQuit?`<span class="note">Abbandonare la partita?</span><button class="btn" data-a="quitYes">Sì, abbandona</button><button class="btn ghost" data-a="quitNo">No</button>`:`<button class="linkish" data-a="quit" ${readOnly?'disabled':''}>Abbandona partita</button>`;
+  return`<header class="top"><div class="brand">Fari nella Tempesta</div><div class="meta"><span class="pill">${LEVELS[S.level].n}</span><span class="pill">Turno ${S.turnNo}</span><span class="pill mono" id="clock">0:00</span></div></header>
+  ${modeLine()}
+  <div class="layout">
+    <div class="col">${bannerHTML()}<p class="hint">${hintText()}</p>${boardHTML()}
+      <section class="panel"><h3>Reazioni</h3><div class="reacts">${['Vengo da te','Aspetta!','Bella mossa','Prosciuga lì','♥'].map(t=>`<button class="btn" data-a="react" data-t="${esc(t)}">${esc(t)}</button>`).join('')}</div></section>
+    </div>
+    <div class="col">${statusHTML()}${actionsHTML()}${order.map(handHTML).join('')}
+      <section class="panel"><h3>Diario di bordo</h3><ol class="log">${logs}</ol><div class="row">${quit}</div></section>
+    </div>
+  </div>${rulesHTML(false)}${endHTML()}`;
+}
+function rulesHTML(open){
+  return`<details class="rules"${open?' open':''}><summary>Come si gioca</summary><div class="rules-body">
+  <p><strong>Obiettivo.</strong> Recuperate le quattro Lenti del faro (Ambra, Corallo, Giada, Zaffiro) e riportate entrambe le pedine sul Molo. Si vince e si perde insieme. Le mani sono scoperte: parlatevi e pianificate.</p>
+  <h4>Il tuo turno</h4>
+  <ol>
+    <li><strong>Fino a 3 azioni</strong>, in qualsiasi ordine, anche ripetute:
+      <ul><li><strong>Muovi</strong> su un'isola vicina (non in diagonale).</li>
+      <li><strong>Prosciuga</strong> un'isola allagata dove sei o vicina.</li>
+      <li><strong>Dona</strong> un Frammento al compagno (Base: stessa isola o vicina; Avanzato: stessa isola).</li>
+      <li><strong>Recupera una Lente</strong>: su un santuario del suo colore (il rombo colorato), scarta 3 Frammenti di quel colore (4 in Avanzato).</li></ul></li>
+    <li><strong>Pesca 2 carte Tesoro.</strong> Se esce una <em>Tempesta</em>, la marea sale di un gradino e le carte Inondazione già uscite vengono rimescolate e rimesse in cima al mazzo: le isole appena bagnate torneranno sotto per prime.</li>
+    <li><strong>Pesca le carte Inondazione</strong> indicate dalla marea. Un'isola asciutta si allaga; un'isola già allagata sprofonda per sempre.</li>
+  </ol>
+  <h4>Carte speciali</h4>
+  <p><strong>Sacchi di sabbia</strong> prosciugano qualsiasi isola; <strong>Raffica di vento</strong> ti porta su qualsiasi isola. Si giocano gratis nel tuo turno. Massimo ${HAND} carte in mano.</p>
+  <h4>Filo Rosso</h4>
+  <p>Una riserva in comune (massimo 3). Guadagnate 1 Filo quando uno dona una carta all'altro o finisce il turno sulla stessa isola del compagno (al massimo uno a turno). Spendete 1 Filo per avere <strong>+1 azione</strong> (una volta per turno) oppure per l'<strong>Argine</strong>: a fine turno pescate una carta Inondazione in meno.</p>
+  <h4>Ruoli</h4>
+  <ul>${Object.values(ROLES).map(r=>`<li><strong>${esc(r.n)}</strong>: ${esc(r.d)}</li>`).join('')}</ul>
+  <h4>Sconfitta</h4>
+  <p>Perdete se sprofonda il Molo, se sprofondano entrambi i santuari di una Lente non ancora recuperata, se una pedina non ha un'isola vicina su cui salvarsi a nuoto, o se la marea arriva al teschio. Quando un'isola sprofonda sotto una pedina, la pedina nuota da sola sull'isola vicina più comoda per tornare al Molo.</p>
+  <h4>Livelli</h4>
+  <div class="tbl-wrap"><table class="cmp"><thead><tr><th></th><th>Base</th><th>Avanzato</th></tr></thead><tbody>
+    <tr><td>Marea iniziale</td><td>2 carte</td><td>2 carte, un gradino più in alto</td></tr>
+    <tr><td>Tempeste nel mazzo</td><td>3</td><td>4</td></tr>
+    <tr><td>Frammenti per Lente</td><td>3</td><td>4</td></tr>
+    <tr><td>Doni</td><td>stessa isola o vicina</td><td>solo stessa isola</td></tr>
+    <tr><td>Filo Rosso iniziale</td><td>2</td><td>1</td></tr></tbody></table></div>
+  <p class="note">Ispirato a L'Isola Proibita (isole che affondano e tesori da recuperare), Pandemic (ruoli, epidemie che rimescolano le minacce) e Hanabi (una risorsa comune da gestire insieme).</p>
+  </div></details>`;
+}
+function tick(){const el=document.getElementById('clock');if(!el||!S||!S.startedAt)return;const end=S.endedAt||Date.now();const t=Math.max(0,Math.round((end-S.startedAt)/1000));el.textContent=Math.floor(t/60)+':'+String(t%60).padStart(2,'0')}
+setInterval(tick,1000);
+(function boot(){const c=roomFromHash();if(c)joinRoom(c,false);else render(true)})();
+
+</script>
+</body>
+</html>
