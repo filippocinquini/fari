@@ -1,0 +1,1000 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Il Gatto e la Volpe</title>
+<meta name="description" content="Gioco cooperativo per due a distanza: un colpo a Venezia nella notte di Carnevale.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,600;0,6..96,800;1,6..96,600;1,6..96,800&family=Figtree:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: colonna unica da telefono. Notte veneziana: laguna d'inchiostro, oro della maschera, cremisi del Carnevale. Tema scuro unico, voluto. */
+:root{
+  --bg:#0a0f1e; --bg2:#0f1629; --panel:#141c33; --panel2:#1b2542; --line:#2a365c; --line2:#3a4874;
+  --ink:#efe8d8; --muted:#9ba5c2; --dim:#6c779a;
+  --gold:#e6b450; --gold2:#f5d58a; --crimson:#e0475a; --water:#163457;
+  --cat:#a98bff; --fox:#ff8c42; --ok:#5fd49b; --warn:#ffb547;
+  --f-display:"Bodoni Moda","Didot","Bodoni 72",Georgia,serif;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--bg);-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:radial-gradient(120% 60% at 50% -10%,#1a2750 0%,var(--bg) 60%) fixed,var(--bg);color:var(--ink);font:16px/1.45 var(--f-body);
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-tap-highlight-color:transparent}
+#app{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px}
+h1,h2,h3{font-family:var(--f-display);margin:0;line-height:1.05;text-wrap:balance;font-weight:800}
+p{margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.lbl{font-family:var(--f-body);font-weight:700;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.mono{font-family:var(--f-mono)}
+.muted{color:var(--muted)} .small{font-size:14px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;border-radius:12px;border:1px solid var(--line2);background:var(--panel2);font-weight:700;cursor:pointer;text-align:center}
+.btn.primary{background:var(--gold);color:#1c1405;border-color:var(--gold)}
+.btn.wide{width:100%}
+.btn.ghost{background:transparent}
+.btn.small{min-height:38px;padding:0 12px;font-size:14px;border-radius:10px}
+.btn:disabled{opacity:.4;cursor:default}
+input[type=text]{font:inherit;min-height:48px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:var(--bg2);color:var(--ink);width:100%;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.note{font-size:14px;color:var(--muted)}
+.cat{color:var(--cat)} .fox{color:var(--fox)} .gold{color:var(--gold)} .bad{color:var(--crimson)} .good{color:var(--ok)}
+
+/* ---- home ---- */
+.hero{padding-block:28px 8px;display:flex;flex-direction:column;gap:14px}
+.hero .eyebrow{color:var(--gold)}
+.hero h1{font-size:clamp(46px,14vw,74px);font-style:italic;letter-spacing:-.01em}
+.hero h1 .amp{color:var(--gold);font-style:normal;font-weight:600}
+.hero .sub{font-size:18px;color:var(--ink);max-width:34ch}
+.mask{width:120px;height:auto;color:var(--gold)}
+.origins{display:grid;grid-template-columns:1fr;gap:0;border-top:1px solid var(--line)}
+.origins div{display:grid;grid-template-columns:118px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.origins b{font-family:var(--f-display);font-style:italic;font-size:16px;color:var(--gold2)}
+
+/* ---- top bar ---- */
+.status{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);padding-bottom:8px;flex-wrap:wrap}
+.status .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-right:6px}
+.status .dot.off{background:var(--warn)}
+.hud{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.bell{display:flex;flex-direction:column;align-items:center;line-height:1}
+.bell b{font-family:var(--f-mono);font-size:22px;color:var(--gold)}
+.sus{display:flex;flex-direction:column;gap:5px;min-width:0}
+.susbar{display:flex;gap:3px}
+.susbar i{flex:1;height:8px;border-radius:2px;background:var(--panel2);border:1px solid var(--line)}
+.susbar i.on{background:var(--crimson);border-color:var(--crimson)}
+.susbar i.warn{box-shadow:0 0 0 1px var(--warn) inset}
+.cups{display:flex;gap:3px;align-items:center}
+.cups svg{width:20px;height:20px}
+.cups .empty{opacity:.25}
+
+/* ---- board ---- */
+.boardwrap{margin-top:12px;display:grid;grid-template-columns:18px 1fr;grid-template-rows:18px auto;gap:4px}
+.colh,.rowh{display:grid;gap:5px;font-family:var(--f-mono);font-size:12px;color:var(--muted);text-align:center;align-items:center}
+.rowh{grid-row:2}
+.board{display:grid;gap:5px;grid-row:2;grid-column:2;aspect-ratio:1;max-width:100%}
+.cell{position:relative;border-radius:10px;background:var(--panel);border:1px solid var(--line);padding:0;display:block;min-width:0;cursor:default;text-align:left;overflow:visible}
+.cell.rev{background:var(--panel2)}
+.cell.unk{background:repeating-linear-gradient(135deg,var(--panel) 0 6px,#121a30 6px 12px)}
+.cell .ic{position:absolute;left:5px;top:5px;width:44%;max-width:26px;color:var(--muted)}
+.cell .ic svg{width:100%;height:auto;display:block}
+.cell .q{position:absolute;left:7px;top:3px;font-family:var(--f-display);font-size:18px;color:var(--dim);font-style:italic}
+.cell .k{position:absolute;right:5px;top:4px;font-family:var(--f-mono);font-weight:600;font-size:13px;color:var(--gold2)}
+.cell .cd{position:absolute;right:5px;bottom:3px;font-family:var(--f-mono);font-size:9.5px;color:var(--dim)}
+.cell .toks{position:absolute;left:4px;right:4px;bottom:4px;display:flex;gap:3px;flex-wrap:wrap;align-items:flex-end}
+.t-molo{background:linear-gradient(180deg,var(--panel2),var(--water))!important}
+.t-molo .ic{color:#8fc1ff} .t-vault .ic{color:var(--gold)} .t-cam .ic,.t-laser .ic{color:var(--crimson)} .t-lock .ic{color:var(--gold2)}
+.t-dog .ic{color:var(--warn)} .t-leva .ic,.t-gate .ic{color:#7fd3ff}
+.off .ic{color:var(--dim)!important;opacity:.7}
+.off .ic::after{content:"";position:absolute;left:-2px;right:-2px;top:50%;height:2px;background:var(--ok);transform:rotate(-30deg)}
+.cell.vault-cell{box-shadow:0 0 0 1px var(--gold) inset}
+.w{position:absolute;background:var(--gold);border-radius:2px;z-index:2}
+.w.N{left:-3px;right:-3px;top:-4.5px;height:4px}.w.S{left:-3px;right:-3px;bottom:-4.5px;height:4px}
+.w.E{top:-3px;bottom:-3px;right:-4.5px;width:4px}.w.O{top:-3px;bottom:-3px;left:-4.5px;width:4px}
+.tok{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-style:italic;font-weight:800;font-size:13px;color:#120c1f;border:2px solid #0a0f1e}
+.tok.G{background:var(--cat)} .tok.V{background:var(--fox)}
+.tok.me{box-shadow:0 0 0 2px var(--ink)}
+.tok.guard{background:var(--crimson);color:#fff;border-radius:6px;font-family:var(--f-mono);font-style:normal;font-size:11px}
+.cell .path{position:absolute;inset:0;pointer-events:none}
+.cell .path::before{content:"";position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:var(--crimson);opacity:.7}
+.cell .dest{position:absolute;right:4px;top:22px;font-family:var(--f-mono);font-size:10px;font-weight:600;color:#fff;background:var(--crimson);border-radius:4px;padding:0 3px}
+.cell .dest.nx{background:transparent;color:var(--crimson);border:1px solid var(--crimson)}
+.cell.target{cursor:pointer;border-color:var(--gold);box-shadow:0 0 0 2px var(--gold) inset}
+.cell.target:active{background:#2a3150}
+.cell.hint{border-color:var(--ok);box-shadow:0 0 0 2px var(--ok) inset}
+
+/* ---- pannelli di fase ---- */
+.phase{margin-top:14px;display:flex;flex-direction:column;gap:12px}
+.phead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.phead h2{font-size:26px;font-style:italic}
+.silence{display:flex;gap:10px;align-items:center;background:#2a1220;border:1px solid #5c2236;color:#ffd5dc;border-radius:12px;padding:10px 12px;font-size:14px}
+.silence svg{flex:none;width:22px;height:22px;color:var(--crimson)}
+.turn{font-weight:700}
+.dice{display:flex;gap:10px;flex-wrap:wrap}
+.die{width:52px;height:52px;border-radius:12px;background:var(--ink);border:2px solid var(--ink);display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:7px;cursor:pointer}
+.die i{width:9px;height:9px;border-radius:50%;background:#14101f;place-self:center}
+.die.G{background:#e8e0ff;border-color:var(--cat)} .die.V{background:#ffe6d4;border-color:var(--fox)}
+.die.used{opacity:.25;cursor:default}
+.die.sel{outline:3px solid var(--gold);outline-offset:3px}
+.die.sm{width:30px;height:30px;padding:4px;border-radius:7px;border-width:1px;cursor:default}
+.die.sm i{width:5px;height:5px}
+.esp{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.acts{display:flex;flex-direction:column;gap:8px}
+.act{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;text-align:left;width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--line2);background:var(--panel2);cursor:pointer;min-height:50px}
+.act b{font-weight:700} .act span{grid-column:1;font-size:13px;color:var(--muted)}
+.act em{grid-row:1/3;grid-column:2;font-style:normal;font-family:var(--f-mono);font-size:13px;color:var(--gold2)}
+.act.move b{color:var(--ink)}
+.slots{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.slot{background:var(--bg2);border:1px dashed var(--line2);border-radius:12px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:46px;font-size:14px;min-width:0}
+.slot.full{border-style:solid;border-color:var(--line2);background:var(--panel)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;border-radius:999px;padding:4px 10px 4px 4px;background:var(--panel2);border:1px solid var(--line)}
+.chip .die.sm{width:22px;height:22px;padding:3px;border-radius:5px}
+.chip .die.sm i{width:4px;height:4px}
+.hand{display:flex;gap:8px;flex-wrap:wrap}
+.tool{min-width:96px;flex:1 1 96px;border-radius:12px;border:1px solid var(--line2);background:var(--panel2);padding:8px 10px;display:flex;flex-direction:column;gap:2px;text-align:left;cursor:pointer}
+.tool b{font-family:var(--f-display);font-style:italic;font-size:17px}
+.tool span{font-size:12px;color:var(--muted)}
+.tool.blind{background:repeating-linear-gradient(135deg,var(--panel2) 0 8px,var(--panel) 8px 16px)}
+.tool.sel{outline:2px solid var(--gold)}
+.tool:disabled{cursor:default}
+.radio li{margin:0}
+.radio{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:15px}
+.ready{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pill{font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line2)}
+.pill.on{background:#123a2a;border-color:var(--ok);color:var(--ok)}
+.tip{background:#1d2238;border:1px solid #3c4a7e;border-left:4px solid var(--gold);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;font-size:15px}
+.tip .lbl{color:var(--gold)}
+.mind{display:flex;gap:10px;flex-wrap:wrap}
+.mcard{width:64px;height:88px;border-radius:12px;background:linear-gradient(160deg,#2d2414,#1a140a);border:2px solid var(--gold);display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:30px;color:var(--gold2)}
+.mcard.back{background:repeating-linear-gradient(45deg,#24192a 0 6px,#1a1220 6px 12px);border-color:var(--line2);color:var(--dim);font-size:18px}
+.pile{display:flex;gap:6px;flex-wrap:wrap;font-family:var(--f-mono)}
+.pile span{padding:2px 8px;border-radius:6px;background:var(--panel2);border:1px solid var(--line)}
+.pile span.x{color:var(--crimson);text-decoration:line-through}
+.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.log li{padding:6px 0;border-bottom:1px solid var(--line);color:var(--ink)}
+.log li.bad{color:#ffb3bd} .log li.good{color:#b6f0d1} .log li.guard{color:var(--muted)}
+.log li .r{font-family:var(--f-mono);font-size:11px;color:var(--dim);margin-right:6px}
+.foot{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.end{position:relative;overflow:hidden;text-align:left}
+.end h2{font-size:40px;font-style:italic}
+.end.win{border-color:var(--gold)}
+.end.lose{border-color:var(--crimson)}
+.seat{display:flex;flex-direction:column;gap:10px}
+.seat h3{font-size:24px;font-style:italic}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mode{border-radius:12px;border:1px solid var(--line2);background:var(--panel2);padding:12px;display:flex;flex-direction:column;gap:4px;text-align:left;cursor:pointer;min-width:0}
+.mode b{font-family:var(--f-display);font-style:italic;font-size:19px}
+.mode span{font-size:12.5px;color:var(--muted)}
+.mode[aria-pressed="true"]{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.share{font-family:var(--f-mono);font-size:13px;word-break:break-all;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px;user-select:all}
+.code{font-family:var(--f-mono);font-size:26px;letter-spacing:.06em;color:var(--gold2)}
+.modal{position:fixed;inset:0;background:rgba(5,8,16,.86);z-index:30;overflow-y:auto;padding:calc(env(safe-area-inset-top,0px) + 16px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 24px) max(16px,env(safe-area-inset-left,0px))}
+.modal .card{max-width:560px;margin:0 auto}
+.rules h3{font-size:22px;font-style:italic;color:var(--gold2);margin-top:8px}
+.rules p,.rules li{font-size:15px;max-width:65ch}
+.rules ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.legend{display:grid;grid-template-columns:28px 1fr;gap:8px 10px;align-items:center;font-size:14px}
+.legend svg{width:24px;height:24px}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl td,.tbl th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.tbl th{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+#toast{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;z-index:40;padding:0 16px}
+#toast .t{max-width:520px;background:var(--panel2);border:1px solid var(--line2);border-radius:12px;padding:10px 14px;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:tin .25s ease-out}
+#toast .t.love{background:#3a1424;border-color:var(--crimson);font-size:18px}
+@keyframes tin{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){#toast .t{animation:none}}
+@media (max-width:380px){.die{width:46px;height:46px}.cell .ic{max-width:20px}.tok{width:19px;height:19px;font-size:11px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" aria-live="polite"></div>
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script>
+/* ===== Il Gatto e la Volpe — motore di gioco (funzioni pure, nessun DOM) ===== */
+const SEATS=['G','V'];
+const NAMES={G:'il Gatto',V:'la Volpe'};
+const CAP={G:'Il Gatto',V:'La Volpe'};
+const DIRS={G:['N','S'],V:['E','O']};
+const DV={N:[-1,0],S:[1,0],E:[0,1],O:[0,-1]};
+const DIRNAME={N:'nord',S:'sud',E:'est',O:'ovest'};
+const TOOLS={grim:'Grimaldello',spec:'Specchio',osso:'Osso',fumo:'Fumogeno'};
+const TOOL_HELP={grim:'apre una serratura vicina',spec:'spegne telecamera o laser vicini',osso:'calma un cane vicino',fumo:'le guardie non ti vedono per questo rintocco'};
+const ART={grim:'il grimaldello',spec:'lo specchio',osso:"l'osso",fumo:'il fumogeno'};
+const RNAME={molo:'Molo',vault:'Cassaforte',sala:'Salone',cam:'Telecamera',laser:'Laser',lock:'Serratura',dog:'Cane',leva:'Leva',gate:'Cancello'};
+
+const MODES={
+  facile:{label:'Facile · tutorial',n:4,rounds:10,susMax:8,dice:4,esp0:2,walls:3,hackCam:2,hackLaser:4,divMin:5,balloBad:4,
+    gSpeed:1,speedUpAt:4,lootSpeed:1,guard2:false,mind:{k:2,max:50},hand:2,blind:false,winkRound:1,winkGame:99,
+    rooms:{cam:3,laser:1,lock:2,dog:1,lever:1}},
+  avanzata:{label:"Avanzata",n:5,rounds:11,susMax:7,dice:4,esp0:1,walls:6,hackCam:3,hackLaser:5,divMin:6,balloBad:3,
+    gSpeed:2,speedUpAt:4,lootSpeed:0,guard2:true,mind:{k:3,max:100},hand:3,blind:true,winkRound:1,winkGame:3,
+    rooms:{cam:4,laser:3,lock:3,dog:2,lever:2}}
+};
+
+const rnd=n=>Math.floor(Math.random()*n);
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
+const clone=o=>JSON.parse(JSON.stringify(o));
+const other=s=>s==='G'?'V':'G';
+const cfgOf=s=>MODES[s.mode]||MODES.facile;
+const rc=(s,i)=>[Math.floor(i/s.n),i%s.n];
+const ix=(s,r,c)=>r*s.n+c;
+const coord=(s,i)=>{const[r,c]=rc(s,i);return 'ABCDE'[c]+(r+1)};
+const wkey=(a,b)=>a<b?a+'-'+b:b+'-'+a;
+function neighbor(s,i,d){const[r,c]=rc(s,i),[dr,dc]=DV[d],nr=r+dr,nc=c+dc;if(nr<0||nc<0||nr>=s.n||nc>=s.n)return -1;return ix(s,nr,nc)}
+function openEdge(s,a,b){return !s.walls.includes(wkey(a,b))}
+function nbrs(s,i){const out=[];for(const d of ['N','E','S','O']){const j=neighbor(s,i,d);if(j>=0&&openEdge(s,i,j))out.push(j)}return out}
+function dist(s,a,b){const[ra,ca]=rc(s,a),[rb,cb]=rc(s,b);return Math.abs(ra-rb)+Math.abs(ca-cb)}
+function bfs(s,from,to,block){ // percorso più breve, ordine fisso N,E,S,O
+  if(from===to)return[from];const prev=new Array(s.n*s.n).fill(-2);prev[from]=-1;const q=[from];
+  while(q.length){const x=q.shift();for(const y of nbrs(s,x)){if(prev[y]!==-2)continue;if(block&&block(y)&&y!==to)continue;prev[y]=x;if(y===to){const p=[y];let k=x;while(k!==-1){p.push(k);k=prev[k]}return p.reverse()}q.push(y)}}
+  return null}
+function reach(s,from,block){const seen=new Set([from]),q=[from];while(q.length){const x=q.shift();for(const y of nbrs(s,x)){if(seen.has(y)||(block&&block(y)))continue;seen.add(y);q.push(y)}}return seen}
+
+/* ---------- generazione del palazzo ---------- */
+function genMap(mode){
+  const cfg=MODES[mode];
+  for(let attempt=0;attempt<500;attempt++){
+    const n=cfg.n,s={n,walls:[]};const N=n*n;const molo=ix(s,n-1,0);
+    // muri
+    const edges=[];for(let i=0;i<N;i++){const[r,c]=rc(s,i);if(c<n-1)edges.push(wkey(i,i+1));if(r<n-1)edges.push(wkey(i,i+n))}
+    shuffle(edges);
+    for(const e of edges){if(s.walls.length>=cfg.walls)break;s.walls.push(e);if(reach(s,0).size!==N)s.walls.pop()}
+    // cassaforte lontana
+    const far=[];for(let i=0;i<N;i++)if(dist(s,molo,i)>=n)far.push(i);
+    const vault=far[rnd(far.length)];
+    const rooms=Array.from({length:N},()=>({t:'sala'}));
+    rooms[molo]={t:'molo',rev:true};rooms[vault]={t:'vault'};
+    const nearMolo=new Set(nbrs(s,molo));
+    const free=shuffle([...Array(N).keys()].filter(i=>i!==molo&&i!==vault));
+    const take=(ok)=>{const k=free.findIndex(ok);if(k<0)return -1;return free.splice(k,1)[0]};
+    const R=cfg.rooms;let fail=false;
+    const letters=['A','B'];
+    for(let l=0;l<R.lever;l++){
+      const lv=take(i=>!nearMolo.has(i)||true);const gt=take(i=>!nearMolo.has(i)&&dist(s,i,lv)>=2);
+      if(lv<0||gt<0){fail=true;break}
+      rooms[lv]={t:'leva',k:letters[l]};rooms[gt]={t:'gate',k:letters[l]};
+    }
+    if(fail)continue;
+    for(let k=0;k<R.laser;k++){const i=take(i=>!nearMolo.has(i));if(i<0){fail=true;break}rooms[i]={t:'laser',off:false}}
+    for(let k=0;k<R.lock;k++){const i=take(i=>!nearMolo.has(i));if(i<0){fail=true;break}rooms[i]={t:'lock',k:1+rnd(6),open:false}}
+    for(let k=0;k<R.dog;k++){const i=take(()=>true);if(i<0){fail=true;break}rooms[i]={t:'dog',awake:false,calm:false}}
+    for(let k=0;k<R.cam;k++){const i=take(()=>true);if(i<0){fail=true;break}rooms[i]={t:'cam',off:false}}
+    if(fail)continue;
+    s.rooms=rooms;
+    // risolvibilità: ogni leva raggiungibile senza passare dai cancelli; cassaforte raggiungibile
+    const isGate=i=>rooms[i].t==='gate';
+    const r0=reach(s,molo,isGate);
+    if(rooms.some((x,i)=>x.t==='leva'&&!r0.has(i)))continue;
+    if(!reach(s,molo).has(vault))continue;
+    // il molo deve avere almeno un vicino libero
+    if(!nbrs(s,molo).some(i=>['sala','cam','dog','leva'].includes(rooms[i].t)))continue;
+    return {n,walls:s.walls,rooms,molo,vault};
+  }
+  throw new Error('mappa non generata');
+}
+
+function randomDest(s,not){let i;do{i=rnd(s.n*s.n)}while(i===not);return i}
+
+/* ---------- partita ---------- */
+function emptyLobby(host){return {v:1,rev:0,status:'lobby',mode:'facile',host:host||null,seats:{G:null,V:null},applied:[],log:[]}}
+function lobbyReady(s){return !!(s.seats.G&&s.seats.V)}
+
+function newGame(prev,local){
+  const mode=prev.mode||'facile',cfg=MODES[mode];
+  const m=genMap(mode);
+  const s={v:1,rev:prev.rev||0,status:'playing',mode,seats:clone(prev.seats),host:local?'local':((prev.seats.G&&prev.seats.G.dev)||prev.host),
+    n:m.n,walls:m.walls,rooms:m.rooms,molo:m.molo,vault:m.vault,
+    pawns:{G:m.molo,V:m.molo},guards:[],sus:0,round:1,phase:'piano',first:'G',turn:'G',ready:{G:false,V:false},
+    dice:{G:[],V:[]},slots:{ballo:{G:null,V:null},caffe:null,div:null},esp:cfg.esp0,loot:false,
+    tools:{G:[],V:[]},deck:[],discard:[],whisper:{G:false,V:false},winks:{G:0,V:0},winksGame:{G:0,V:0},winkShow:[],fumo:{G:false,V:false},
+    mind:null,placed:[],applied:[],log:[],rej:null,result:null,games:(prev.games||0)};
+  // guardia
+  const gStart=(()=>{const c=[];for(let i=0;i<s.n*s.n;i++)if(dist(s,s.molo,i)>=s.n-1&&i!==s.vault)c.push(i);return c[rnd(c.length)]})();
+  s.guards.push({at:gStart,dest:randomDest(s,gStart),next:0});s.guards[0].next=randomDest(s,s.guards[0].dest);
+  // attrezzi
+  s.deck=shuffle([...'grim grim grim spec spec spec osso osso osso fumo fumo'.split(' ')]);
+  for(const p of SEATS)for(let k=0;k<cfg.hand;k++)s.tools[p].push(drawTool(s));
+  log(s,`Rintocco 1. Il Gatto e la Volpe entrano a Palazzo Corvaro dal molo (${coord(s,s.molo)}).`);
+  return s;
+}
+function drawTool(s){if(!s.deck.length){s.deck=shuffle(s.discard);s.discard=[]}if(!s.deck.length)s.deck=shuffle(['grim','spec','osso','fumo']);return {t:s.deck.pop(),known:null,not:[]}}
+function log(s,msg,kind){s.log.push({r:s.round||0,m:msg,k:kind||''});if(s.log.length>60)s.log.splice(0,s.log.length-60)}
+function lobbyFrom(s){return {v:1,rev:s.rev,status:'lobby',mode:s.mode,host:s.host,seats:clone(s.seats),applied:[],log:[],games:s.games||0}}
+
+/* ---------- regole di movimento ---------- */
+function onLever(s,letter,except){return SEATS.some(p=>p!==except&&s.rooms[s.pawns[p]].t==='leva'&&s.rooms[s.pawns[p]].k===letter)}
+function canEnter(s,mover,from,to){
+  if(to<0||!openEdge(s,from,to))return {ok:false,why:'muro'};
+  const r=s.rooms[to];
+  if(r.t==='lock'&&!r.open)return {ok:false,why:`serratura chiusa (${coord(s,to)})`};
+  if(r.t==='laser'&&!r.off)return {ok:false,why:`laser acceso (${coord(s,to)})`};
+  if(r.t==='gate'){const o=other(mover);if(!(onLever(s,r.k,mover)||s.pawns[o]===to))return {ok:false,why:`cancello ${r.k} chiuso`}}
+  return {ok:true};
+}
+function enter(s,p,to){
+  s.pawns[p]=to;const r=s.rooms[to];const first=!r.rev;r.rev=true;const cfg=cfgOf(s);
+  const where=coord(s,to);
+  if(r.t==='cam'&&!r.off){s.sus++;log(s,`📷 ${CAP[p]} passa davanti alla telecamera di ${where}: sospetto +1.`,'bad')}
+  else if(r.t==='dog'&&!r.awake&&!r.calm){r.awake=true;s.sus++;const g=nearestGuard(s,to);s.guards[g].dest=to;log(s,`🐕 Il cane di ${where} abbaia! Sospetto +1 e la guardia corre a ${where}.`,'bad')}
+  else if(first&&r.t!=='sala'&&r.t!=='molo')log(s,`${CAP[p]} scopre: ${RNAME[r.t]} in ${where}.`);
+  for(const g of s.guards)if(g.at===to&&!s.fumo[p]){s.sus+=2;log(s,`🔦 ${CAP[p]} finisce dritto addosso alla guardia in ${where}: sospetto +2!`,'bad')}
+}
+function nearestGuard(s,i){let best=0,bd=99;s.guards.forEach((g,k)=>{const p=bfs(s,g.at,i);const d=p?p.length:99;if(d<bd){bd=d;best=k}});return best}
+function stepTargets(s,seat,pawn,steps){ // celle raggiungibili con un dado in Passi, per direzione
+  const out={};for(const d of DIRS[seat]){let at=s.pawns[pawn];const path=[];for(let k=0;k<steps;k++){const to=neighbor(s,at,d);if(to<0||!canEnter(s,pawn,at,to).ok)break;path.push(to);at=to}if(path.length)out[d]=path}
+  return out}
+function adjacentOpen(s,i){return nbrs(s,i)}
+
+/* ---------- condizioni di vittoria/sconfitta ---------- */
+function checkEnd(s){
+  if(s.status!=='playing')return true;
+  const cfg=cfgOf(s);
+  if(s.sus>=cfg.susMax){s.sus=cfg.susMax;s.status='lost';s.result='sospetto';log(s,'🚨 Scatta l\'allarme generale. Il Gatto e la Volpe finiscono in manette.','bad');return true}
+  if(s.loot&&s.pawns.G===s.molo&&s.pawns.V===s.molo){s.status='won';s.result='fuga';log(s,'🎭 La gondola scivola via nella laguna con la Maschera d\'Oro a bordo!','good');return true}
+  return false;
+}
+
+/* ---------- fasi ---------- */
+function rollDice(s){const cfg=cfgOf(s);for(const p of SEATS)s.dice[p]=Array.from({length:cfg.dice},()=>({v:1+rnd(6),used:false}));s.phase='dadi';s.turn=s.first;s.placed=[];s.winkShow=[];
+  log(s,`🎲 Dadi tirati. Silenzio radio: inizia ${NAMES[s.first]}.`)}
+function left(s,p){return s.dice[p].filter(d=>!d.used).length}
+function afterPlacement(s,p){
+  if(checkEnd(s))return;
+  const o=other(p);
+  if(left(s,o)>0)s.turn=o;else if(left(s,p)>0)s.turn=p;else endDice(s);
+}
+function endDice(s){
+  if(!s.loot&&s.pawns.G===s.vault&&s.pawns.V===s.vault){startMind(s);return}
+  guardPhase(s);
+}
+function startMind(s){
+  const cfg=cfgOf(s);const nums=shuffle([...Array(cfg.mind.max).keys()].map(x=>x+1)).slice(0,cfg.mind.k*2);
+  s.mind={G:nums.slice(0,cfg.mind.k).sort((a,b)=>a-b),V:nums.slice(cfg.mind.k).sort((a,b)=>a-b),pile:[],lost:[]};
+  s.phase='mind';log(s,'🔐 Siete entrambi davanti alla cassaforte. Giocate i numeri in ordine crescente, in silenzio.');
+}
+function guardSpeed(s){const cfg=cfgOf(s);return cfg.gSpeed+(s.sus>=cfg.speedUpAt?1:0)+(s.loot?cfg.lootSpeed:0)}
+function guardPhase(s){
+  const sp=guardSpeed(s);
+  s.guards.forEach((g,k)=>{
+    const seen={G:false,V:false};const trail=[coord(s,g.at)];
+    for(let step=0;step<sp;step++){
+      if(g.at===g.dest){g.dest=g.next;g.next=randomDest(s,g.dest)}
+      const p=bfs(s,g.at,g.dest);if(!p||p.length<2)break;
+      g.at=p[1];trail.push(coord(s,g.at));
+      for(const q of SEATS)if(s.pawns[q]===g.at&&!seen[q]&&!s.fumo[q]){seen[q]=true;s.sus+=2;log(s,`🔦 La guardia${s.guards.length>1?' '+(k+1):''} sorprende ${NAMES[q]} in ${coord(s,g.at)}: sospetto +2!`,'bad')}
+      else if(s.pawns[q]===g.at&&s.fumo[q]&&!seen[q]){seen[q]=true;log(s,`💨 Il fumogeno nasconde ${NAMES[q]} alla guardia.`)}
+    }
+    if(g.at===g.dest){g.dest=g.next;g.next=randomDest(s,g.dest)}
+    log(s,`La guardia${s.guards.length>1?' '+(k+1):''} cammina: ${trail.join(' → ')}.`,'guard');
+  });
+  if(checkEnd(s))return;
+  endRound(s);
+}
+function endRound(s){
+  const cfg=cfgOf(s);
+  if(s.round>=cfg.rounds){s.status='lost';s.result='alba';log(s,'🌅 Suonano le campane del mattino: l\'alba vi sorprende dentro il palazzo.','bad');return}
+  s.round++;s.phase='piano';s.first=other(s.first);s.turn=s.first;s.ready={G:false,V:false};
+  s.slots={ballo:{G:null,V:null},caffe:null,div:null};s.whisper={G:false,V:false};s.winks={G:0,V:0};s.fumo={G:false,V:false};
+  s.dice={G:[],V:[]};
+  log(s,`🔔 Rintocco ${s.round} di ${cfg.rounds}.`);
+}
+
+/* ---------- validazione azioni (usata anche dall'interfaccia) ---------- */
+function dieValue(s,p,d,esp){const x=s.dice[p][d];if(!x)return null;return Math.max(1,Math.min(6,x.v+(esp||0)))}
+function slotOptions(s,p,d,esp){ // che cosa si può fare con questo dado
+  const cfg=cfgOf(s),v=dieValue(s,p,d,esp),opts=[];if(v==null)return opts;
+  const mustBallo=left(s,p)===1&&s.slots.ballo[p]==null;
+  const add=(o)=>{if(mustBallo&&o.slot!=='ballo')return;opts.push(o)};
+  // passi
+  for(const pawn of SEATS){const st=stepTargets(s,p,pawn,v===6?2:1);for(const dir in st)add({slot:'passi',pawn,dir,steps:st[dir].length,path:st[dir]})}
+  if(s.slots.ballo[p]==null)add({slot:'ballo'});
+  if(s.slots.caffe==null)add({slot:'caffe'});
+  if(s.slots.div==null&&v>=cfg.divMin)add({slot:'div'});
+  if(p==='G')add({slot:'hacker'});
+  if(p==='V'){for(const t of adjacentOpen(s,s.pawns.V)){const r=s.rooms[t];if(r.t==='lock'&&!r.open&&r.k===v)add({slot:'scasso',target:t})}}
+  add({slot:'pausa'});
+  return opts;
+}
+function toolTargets(s,p,i){ // bersagli validi per un attrezzo
+  const cfg=cfgOf(s),c=s.tools[p][i];if(!c)return[];
+  const adj=adjacentOpen(s,s.pawns[p]);
+  if(cfg.blind)return adj.concat([s.pawns[p]]); // alla cieca: qualsiasi stanza vicina o la tua
+  if(c.t==='fumo')return[s.pawns[p]];
+  return adj.filter(t=>toolFits(s,c.t,t));
+}
+function toolFits(s,t,target){const r=s.rooms[target];
+  if(t==='grim')return r.t==='lock'&&!r.open;
+  if(t==='spec')return (r.t==='cam'||r.t==='laser')&&!r.off;
+  if(t==='osso')return r.t==='dog'&&!r.calm;
+  if(t==='fumo')return true;return false}
+function winkTag(s,p,d){const live=s.dice[p].filter(x=>!x.used);const v=s.dice[p][d].v;if(live.length===1)return 'unico';
+  const vs=live.map(x=>x.v);const mx=Math.max(...vs),mn=Math.min(...vs);const cnt=vs.filter(x=>x===v).length;
+  if(v===mx&&cnt===1)return 'il più alto';if(v===mn&&cnt===1)return 'il più basso';return null}
+
+/* ---------- applicazione delle azioni ---------- */
+function apply(S,p,a){
+  const s=clone(S);const cfg=cfgOf(s);const fail=why=>({ok:false,why});
+  if(!a||!a.t)return fail('Azione sconosciuta.');
+  if(a.t==='again'){if(s.status==='playing')return fail('Partita in corso.');const g=newGame(s,s.host==='local');g.games=(s.games||0)+1;return {ok:true,s:g}}
+  if(a.t==='toLobby'){return {ok:true,s:lobbyFrom(s)}}
+  if(s.status!=='playing')return fail('La partita è finita.');
+  if(a.t==='ready'){if(s.phase!=='piano')return fail('Non è la fase di piano.');s.ready[p]=!s.ready[p];
+    if(s.ready.G&&s.ready.V)rollDice(s);return {ok:true,s}}
+  if(a.t==='whisper'){if(s.phase!=='piano'||!cfg.blind)return fail('Ora non puoi sussurrare.');if(s.whisper[p])return fail('Hai già sussurrato in questo rintocco.');
+    if(!TOOLS[a.tool])return fail('Attrezzo sconosciuto.');const o=other(p);let hit=0;
+    for(const c of s.tools[o]){if(c.t===a.tool){c.known=a.tool;hit++}else if(!c.not.includes(a.tool))c.not.push(a.tool)}
+    s.whisper[p]=true;log(s,`🤫 ${CAP[p]} sussurra a ${NAMES[o]}: «${hit?`hai ${hit===1?'un':hit} ${TOOLS[a.tool]}${hit>1?' (più di uno)':''}`:`non hai nessun ${TOOLS[a.tool]}`}».`);return {ok:true,s}}
+  if(a.t==='mindPlay'){
+    if(s.phase!=='mind')return fail('Non siete alla cassaforte.');const h=s.mind[p];if(!h.length)return fail('Hai già giocato tutte le carte.');
+    const card=h.shift();const o=other(p);const lower=s.mind[o].filter(x=>x<card);
+    if(lower.length){s.mind[o]=s.mind[o].filter(x=>x>card);s.mind.lost.push(...lower);s.sus++;
+      log(s,`❌ ${CAP[p]} gioca ${card}, ma ${NAMES[o]} aveva ${lower.join(', ')}. La cassaforte scatta a vuoto: sospetto +1.`,'bad')}
+    else log(s,`${CAP[p]} gioca ${card}.`);
+    s.mind.pile.push(card);
+    if(checkEnd(s))return {ok:true,s};
+    if(!s.mind.G.length&&!s.mind.V.length){
+      s.loot=true;s.rooms[s.vault].rev=true;log(s,'🎭 Clic. La cassaforte si apre: la Maschera d\'Oro è vostra! Ora al molo, di corsa.','good');
+      if(cfg.guard2){const c=[];for(let i=0;i<s.n*s.n;i++)if(dist(s,i,s.pawns.G)>=3&&i!==s.molo)c.push(i);const at=c.length?c[rnd(c.length)]:0;
+        s.guards.push({at,dest:s.molo,next:randomDest(s,s.molo)});log(s,`⚠️ Scatta il turno di guardia: un secondo guardiano entra in ${coord(s,at)} e corre verso il molo!`,'bad')}
+      s.mind=null;guardPhase(s);
+    }
+    return {ok:true,s};
+  }
+  // azioni nella fase dei dadi
+  if(s.phase!=='dadi')return fail('Non è la fase dei dadi.');
+  if(s.turn!==p)return fail('Non è il tuo turno.');
+  if(a.t==='wink'){
+    const d=s.dice[p][a.d];if(!d||d.used)return fail('Dado non valido.');
+    if(s.winks[p]>=cfg.winkRound||s.winksGame[p]>=cfg.winkGame)return fail('Niente più occhiolini.');
+    const tag=winkTag(s,p,a.d);if(!tag)return fail('Puoi mostrare solo il dado più alto, il più basso o l\'unico.');
+    s.winks[p]++;s.winksGame[p]++;s.winkShow.push({p,v:d.v,tag});log(s,`😉 Occhiolino ${p==='G'?'del Gatto':'della Volpe'}: ha un ${d.v}, ${tag}.`);return {ok:true,s}}
+  if(a.t==='tool'){
+    const c=s.tools[p][a.i];if(!c)return fail('Attrezzo non valido.');
+    const valid=toolTargets(s,p,a.i);if(!valid.includes(a.target))return fail('Bersaglio non valido.');
+    s.tools[p].splice(a.i,1);s.discard.push(c.t);const where=coord(s,a.target);
+    if(c.t==='fumo'){s.fumo[p]=true;log(s,`💨 ${CAP[p]} accende un fumogeno: per questo rintocco le guardie non ${p==='G'?'lo':'la'} vedono.`)}
+    else if(toolFits(s,c.t,a.target)){const r=s.rooms[a.target];r.rev=true;
+      if(c.t==='grim'){r.open=true;log(s,`🗝️ ${CAP[p]} usa il grimaldello: la serratura di ${where} si apre.`,'good')}
+      if(c.t==='spec'){r.off=true;log(s,`🪞 ${CAP[p]} usa lo specchio: ${r.t==='cam'?'telecamera':'laser'} di ${where} fuori uso.`,'good')}
+      if(c.t==='osso'){r.calm=true;log(s,`🦴 ${CAP[p]} lancia un osso: il cane di ${where} scodinzola e tace.`,'good')}}
+    else{s.sus++;log(s,`💥 ${CAP[p]} tira fuori ${ART[c.t]} su ${where}, ma non serve a nulla: rumore di ferraglia, sospetto +1.`,'bad')}
+    s.tools[p].push(drawTool(s));
+    if(checkEnd(s))return {ok:true,s};
+    return {ok:true,s};
+  }
+  if(a.t!=='place')return fail('Azione sconosciuta.');
+  const d=s.dice[p][a.d];if(!d||d.used)return fail('Dado non valido.');
+  const esp=a.esp|0;if(Math.abs(esp)>s.esp)return fail('Non avete abbastanza espresso.');
+  const v=dieValue(s,p,a.d,esp);
+  const opts=slotOptions(s,p,a.d,esp);
+  const match=opts.find(o=>o.slot===a.slot&&(a.slot!=='passi'||(o.pawn===a.pawn&&o.dir===a.dir))&&(a.slot!=='scasso'||o.target===a.target));
+  if(!match)return fail(left(s,p)===1&&s.slots.ballo[p]==null?'L\'ultimo dado deve andare nel Ballo.':'Mossa non valida.');
+  d.used=true;s.esp-=Math.abs(esp);const espTxt=esp?` (con ${Math.abs(esp)} espresso)`:'';
+  const who=CAP[p];const rec={p,v,slot:a.slot};
+  switch(a.slot){
+    case 'passi':{const steps=Math.max(1,Math.min(match.steps,a.steps||match.steps));const path=match.path.slice(0,steps);
+      log(s,`${who} piazza un ${v}${espTxt} nei Passi: ${a.pawn===p?'si muove':'sposta '+NAMES[a.pawn]} a ${DIRNAME[a.dir]} → ${path.map(i=>coord(s,i)).join(' → ')}.`);
+      for(const to of path){enter(s,a.pawn,to);if(s.status!=='playing'||checkEnd(s))break}
+      rec.pawn=a.pawn;rec.dir=a.dir;break}
+    case 'ballo':{s.slots.ballo[p]=v;log(s,`${who} mette un ${v}${espTxt} nel Ballo.`);
+      const g=s.slots.ballo.G,w=s.slots.ballo.V;
+      if(g!=null&&w!=null){const diff=Math.abs(g-w);
+        if(diff===0){s.esp=Math.min(3,s.esp+1);log(s,`💃 Ballo perfetto (${g} e ${w}): +1 espresso.`,'good')}
+        else if(diff>=cfg.balloBad){s.sus++;log(s,`💃 Ballo sgraziato (${g} e ${w}): vi notano, sospetto +1.`,'bad')}
+        else log(s,`💃 Ballo discreto (${g} e ${w}): nessuno vi nota.`)}
+      break}
+    case 'caffe':{s.slots.caffe={p,v};const before=s.esp;s.esp=Math.min(3,s.esp+1);log(s,`☕ ${who} beve un caffè al bar del salone${espTxt}: ${s.esp>before?'+1 espresso':'espresso già al massimo'}.`);break}
+    case 'div':{const t=a.target|0;if(t<0||t>=s.n*s.n)return fail('Stanza non valida.');const gk=Math.max(0,Math.min(s.guards.length-1,a.guard|0));
+      s.slots.div={p,v};s.guards[gk].dest=t;log(s,`🎆 ${who} lancia un petardo (${v}${espTxt}): la guardia${s.guards.length>1?' '+(gk+1):''} ora va verso ${coord(s,t)}.`);break}
+    case 'hacker':{const t=a.target|0;if(t<0||t>=s.n*s.n)return fail('Stanza non valida.');const r=s.rooms[t];const where=coord(s,t);
+      if(r.t==='cam'&&!r.off&&v>=cfg.hackCam){r.off=true;r.rev=true;log(s,`💻 ${who} hackera ${where} con un ${v}${espTxt}: telecamera spenta.`,'good')}
+      else if(r.t==='laser'&&!r.off&&v>=cfg.hackLaser){r.off=true;r.rev=true;log(s,`💻 ${who} hackera ${where} con un ${v}${espTxt}: laser spenti.`,'good')}
+      else if(r.t==='laser'&&!r.off){log(s,`💻 ${who} prova a hackerare ${where} con un ${v}: troppo poco per un laser (serve ${cfg.hackLaser}+).`,'bad')}
+      else if(r.t==='cam'&&!r.off){log(s,`💻 ${who} prova a hackerare ${where} con un ${v}: troppo poco (serve ${cfg.hackCam}+).`,'bad')}
+      else log(s,`💻 ${who} hackera ${where}: nessun sistema da spegnere lì.`);
+      rec.target=t;break}
+    case 'scasso':{const r=s.rooms[match.target];r.open=true;r.rev=true;log(s,`🔓 ${who} scassina la serratura di ${coord(s,match.target)} con un ${v}${espTxt}.`,'good');break}
+    case 'pausa':{log(s,`${who} lascia un ${v} in pausa.`);break}
+  }
+  s.placed.push(rec);
+  afterPlacement(s,p);
+  return {ok:true,s};
+}
+
+if(typeof module!=='undefined')module.exports={MODES,SEATS,genMap,newGame,emptyLobby,apply,slotOptions,toolTargets,winkTag,bfs,coord,canEnter,left,cfgOf,stepTargets,lobbyReady,other};
+
+/* ===== Interfaccia, rete (MQTT pubblico, nessun account) ===== */
+const app=document.getElementById('app'),toastEl=document.getElementById('toast');
+const BROKERS=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt'];
+const PREFIX='gatto-volpe/v1/';
+let S=null,LOCAL=false,room=null,client=null,net='off',gotState=false,remoteRev=0,seq=0,pendingRender=false;
+const ui={sel:null,esp:0,pick:null,view:'G',joinCode:'',draft:{G:'',V:''},rules:false,fullLog:false,confirmQuit:false,pending:null,turnKey:''};
+const DEV=(()=>{const mk=()=>'d'+Math.random().toString(36).slice(2,11);try{let d=localStorage.getItem('gv.dev');if(!d){d=mk();localStorage.setItem('gv.dev',d)}return d}catch(e){return mk()}})();
+const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let seen=(()=>{try{return new Set(JSON.parse(localStorage.getItem('gv.tips')||'[]'))}catch(e){return new Set()}})();
+function saveSeen(){try{localStorage.setItem('gv.tips',JSON.stringify([...seen].slice(-200)))}catch(e){}}
+
+/* ---------- icone ---------- */
+const sv=(p,extra)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${extra||''}>${p}</svg>`;
+const ICON={
+  molo:sv('<path d="M2 15c4 3.5 15 3.5 20-3"/><path d="M5 15.5l1-3h11l2 1.5"/><path d="M18.5 4v9"/>'),
+  vault:sv('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="12" cy="12" r="4"/><path d="M12 8v1.5M12 14.5V16M8 12h1.5M14.5 12H16"/>'),
+  cam:sv('<path d="M3 8.5h11v7H3z"/><path d="M14 11l6-3v8l-6-3"/><circle cx="7" cy="12" r="1.2"/>'),
+  laser:sv('<path d="M3 6h18M3 12h18M3 18h18" stroke-dasharray="2.5 2.5"/>'),
+  lock:sv('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
+  dog:sv('<circle cx="7.5" cy="9" r="1.7"/><circle cx="12" cy="6.5" r="1.7"/><circle cx="16.5" cy="9" r="1.7"/><path d="M8 16.5c0-2.6 1.9-4.5 4-4.5s4 1.9 4 4.5c0 2-1.8 3-4 3s-4-1-4-3z"/>'),
+  leva:sv('<path d="M5 19h14"/><path d="M12 19l4.5-11"/><circle cx="17" cy="6.5" r="2"/>'),
+  gate:sv('<path d="M5 4v16M9.7 4v16M14.3 4v16M19 4v16M4 9h16M4 15h16"/>'),
+  sala:'',
+  mask:sv('<path d="M2.5 8.5c3-2 6.5-2 9.5.3 3-2.3 6.5-2.3 9.5-.3 0 5.5-3 8.5-6 8.5-1.6 0-2.6-1.4-3.5-3-.9 1.6-1.9 3-3.5 3-3 0-6-3-6-8.5z"/><circle cx="8" cy="11" r="1.3"/><circle cx="16" cy="11" r="1.3"/>'),
+  cup:sv('<path d="M4 9h12v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M16 10h1.5a2.5 2.5 0 0 1 0 5H16"/><path d="M8 3.5c0 1 1 1.5 1 2.5M12 3.5c0 1 1 1.5 1 2.5"/>'),
+  hush:sv('<circle cx="12" cy="12" r="9"/><path d="M8 15c2.5-1.5 5.5-1.5 8 0"/><path d="M12 4v16" stroke-width="2.4"/>'),
+  heart:sv('<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>')
+};
+const PIPS={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+function dieHTML(v,cls,attrs){let h='';for(let k=0;k<9;k++)h+=PIPS[v].includes(k)?'<i></i>':'<span></span>';return `<button type="button" class="die ${cls||''}" ${attrs||''} aria-label="dado ${v}">${h}</button>`}
+function dieSm(v,who){let h='';for(let k=0;k<9;k++)h+=PIPS[v].includes(k)?'<i></i>':'<span></span>';return `<span class="die sm ${who||''}" aria-label="${v}">${h}</span>`}
+const ARROW={N:'↑',S:'↓',E:'→',O:'←'};
+
+/* ---------- identità e permessi ---------- */
+function seatOfDev(dev){if(!S||!S.seats)return null;if(S.seats.G&&S.seats.G.dev===dev)return'G';if(S.seats.V&&S.seats.V.dev===dev)return'V';return null}
+function me(){if(LOCAL)return ui.view;return seatOfDev(DEV)}
+function isHost(){return LOCAL||(S&&S.host===DEV)}
+function nameOf(p){return (S&&S.seats&&S.seats[p]&&S.seats[p].name)||CAP[p]}
+function toast(msg,love){const d=document.createElement('div');d.className='t'+(love?' love':'');d.textContent=msg;toastEl.appendChild(d);while(toastEl.children.length>3)toastEl.firstChild.remove();setTimeout(()=>d.remove(),3400)}
+
+/* ---------- memoria locale ---------- */
+const cacheKey=()=>LOCAL?'gv.local':'gv.room.'+room;
+function saveCache(){try{localStorage.setItem(cacheKey(),JSON.stringify(S))}catch(e){}}
+function loadCache(){try{const s=JSON.parse(localStorage.getItem(cacheKey())||'null');return s&&s.v===1&&s.seats?s:null}catch(e){return null}}
+
+/* ---------- salvataggio, invio, azioni ---------- */
+function commit(s){s.rev=((S&&S.rev)||0)+1;s.by=DEV;const prev=S;S=s;afterState(prev);saveCache();if(!LOCAL)publishState()}
+function publishState(){if(!client||!room||!S)return;try{client.publish(PREFIX+room+'/state',JSON.stringify(S),{qos:1,retain:true})}catch(e){toast('Mossa non inviata: controlla la connessione.')}}
+function resetSel(){ui.sel=null;ui.esp=0;ui.pick=null}
+function afterState(prev){
+  if(S&&S.status==='playing'){
+    const key=S.round+':'+S.phase+':'+S.turn+':'+(S.placed?S.placed.length:0);
+    if(key!==ui.turnKey){ui.turnKey=key;resetSel()}
+    if(LOCAL&&S.phase==='dadi')ui.view=S.turn;
+    if(!LOCAL&&prev&&prev.status==='playing'){
+      const m=me();
+      if(m&&S.phase==='dadi'&&S.turn===m&&(prev.turn!==m||prev.phase!=='dadi'))toast('Tocca a te.');
+      if(prev.phase!=='piano'&&S.phase==='piano'&&S.round!==prev.round)toast(`Rintocco ${S.round}: si pianifica, potete parlare.`);
+      if(prev.phase!=='mind'&&S.phase==='mind')toast('Cassaforte! Silenzio assoluto.');
+    }
+  }
+  if(ui.pending&&S){
+    if(S.rej&&S.rej.id===ui.pending.id){toast(S.rej.why);ui.pending=null}
+    else if((S.applied||[]).includes(ui.pending.id))ui.pending=null;
+  }
+  render();
+}
+function dispatch(a){
+  if(!S)return;const p=me();
+  if(!p){toast('Stai guardando: non sei seduto al tavolo.');return}
+  if(isHost()){
+    const r=apply(S,p,a);if(!r.ok){toast(r.why);return}
+    r.s.applied=(S.applied||[]).slice(-40);r.s.rej=null;commit(r.s);return;
+  }
+  if(ui.pending){toast('Un attimo: la mossa precedente sta ancora viaggiando.');return}
+  const id=DEV+'-'+(++seq)+'-'+(Date.now()%1e6);ui.pending={id,a,tries:0};render();sendIntent();
+}
+function sendIntent(){
+  const P=ui.pending;if(!P)return;
+  if(!client){toast('Non sei connesso: riprovo appena torna la rete.')}
+  else try{client.publish(PREFIX+room+'/act',JSON.stringify({id:P.id,dev:DEV,a:P.a}),{qos:1})}catch(e){}
+  P.tries++;
+  setTimeout(()=>{if(ui.pending&&ui.pending.id===P.id){if(P.tries>=8){ui.pending=null;toast('La pagina del Gatto sembra chiusa o offline: deve restare aperta perché la partita vada avanti.');render()}else sendIntent()}},2500);
+}
+function onAct(d){
+  if(!isHost()||!S||!d||!d.id||!d.a)return;
+  if((S.applied||[]).includes(d.id)){publishState();return}
+  const p=seatOfDev(d.dev);if(!p)return;
+  const r=apply(S,p,d.a);let s;
+  if(r.ok){s=r.s;s.rej=null}else{s=clone(S);s.rej={id:d.id,why:r.why}}
+  s.applied=[...(S.applied||[]),d.id].slice(-40);commit(s);
+}
+
+/* ---------- stanze di gioco ---------- */
+function roomFromHash(){const h=decodeURIComponent(location.hash.slice(1)).toUpperCase().replace(/[^A-Z0-9-]/g,'');return h.length>=4&&h.length<=24?h:null}
+function genCode(){const w=['GONDOLA','MASCHERA','LAGUNA','CANALE','PONTE','RIALTO','CALLE','CAMPO','DOGE','VOLPE','GATTO','LEONE'];return w[Math.floor(Math.random()*w.length)]+'-'+(1000+Math.floor(Math.random()*9000))}
+function shareUrl(){return location.origin+location.pathname+'#'+room}
+function closeClient(){if(client){try{client.end(true)}catch(e){}}client=null}
+function joinRoom(code,isNew){
+  closeClient();LOCAL=false;room=code;gotState=false;remoteRev=0;resetSel();
+  if(location.hash.slice(1)!==code)history.replaceState(null,'','#'+code);
+  S=isNew?emptyLobby(DEV):loadCache();render();connect(0,isNew,code);
+}
+function connect(i,isNew,code){
+  if(code!==room)return;
+  if(typeof mqtt==='undefined'){net='nolib';if(!S)S=emptyLobby(DEV);render();return}
+  if(i>=BROKERS.length){net='fail';if(!S)S=emptyLobby(DEV);render();return}
+  net='connecting';render();
+  let c,opened=false;
+  try{c=mqtt.connect(BROKERS[i],{clientId:'gv_'+Math.random().toString(36).slice(2,12),clean:true,connectTimeout:8000,reconnectPeriod:3000,keepalive:30})}
+  catch(e){connect(i+1,isNew,code);return}
+  const timer=setTimeout(()=>{if(!opened){try{c.end(true)}catch(e){}connect(i+1,isNew,code)}},9000);
+  c.on('connect',()=>{
+    if(code!==room){try{c.end(true)}catch(e){}return}
+    opened=true;clearTimeout(timer);client=c;net='on';
+    c.subscribe([PREFIX+room+'/state',PREFIX+room+'/act',PREFIX+room+'/sig'],{qos:1});render();
+    setTimeout(()=>{if(c!==client)return;
+      if(!gotState){if(!S)S=emptyLobby(DEV);if(isNew||S.rev>0){commit(clone(S));isNew=false}else render()}
+      else if(S&&S.rev>remoteRev&&isHost())publishState();
+      if(ui.pending)sendIntent();
+    },2500);
+  });
+  c.on('message',(topic,buf)=>{if(c!==client)return;let d;try{d=JSON.parse(typeof buf==='string'?buf:new TextDecoder().decode(buf))}catch(e){return}
+    if(topic.endsWith('/state'))onState(d);else if(topic.endsWith('/act'))onAct(d);else onSignal(d)});
+  c.on('offline',()=>{if(c===client){net='retry';render()}});
+  c.on('reconnect',()=>{if(c===client){net='retry';render()}});
+  c.on('error',()=>{});
+}
+function onState(d){
+  if(!d||d.v!==1||!d.seats)return;remoteRev=Math.max(remoteRev,d.rev||0);gotState=true;
+  if(S&&!(d.rev>S.rev||(d.rev===S.rev&&(d.by||'')>(S.by||'')))){render();return}
+  const prev=S;S=d;saveCache();afterState(prev);
+}
+function onSignal(d){if(!d||d.dev===DEV||typeof d.t!=='string')return;toast(`${nameOf(d.from)}: ${d.t.slice(0,30)}`,d.t==='♥')}
+function signal(t){toast(LOCAL?t:'Tu: '+t,t==='♥');if(LOCAL||!client)return;try{client.publish(PREFIX+room+'/sig',JSON.stringify({from:me(),t,dev:DEV}),{qos:0})}catch(e){}}
+function goLocal(){closeClient();room=null;LOCAL=true;history.replaceState(null,'',location.pathname+location.search);
+  S=loadCache();if(!S){S=emptyLobby('local');S.seats={G:{dev:'local',name:'Gatto'},V:{dev:'local',name:'Volpe'}}}resetSel();render()}
+function goHome(){closeClient();room=null;LOCAL=false;S=null;net='off';history.replaceState(null,'',location.pathname+location.search);resetSel();render()}
+
+/* ---------- comandi ---------- */
+const H={
+  create(){joinRoom(genCode(),true)},
+  join(){const c=(ui.joinCode||'').toUpperCase().replace(/[^A-Z0-9-]/g,'');if(c.length<4){toast('Scrivi il codice che ti hanno mandato.');return}ui.joinCode='';joinRoom(c,false)},
+  local(){goLocal()},
+  home(){goHome()},
+  rules(){ui.rules=true;render()},
+  closeRules(){ui.rules=false;render()},
+  copy(){const u=shareUrl();try{navigator.clipboard.writeText(u).then(()=>toast('Link copiato: mandalo a chi gioca con te.'),()=>selectLink())}catch(e){selectLink()}},
+  sit({seat}){const name=(ui.draft[seat]||'').trim().slice(0,18)||CAP[seat];const s=clone(S),o=other(seat);
+    if(!LOCAL&&s.seats[o]&&s.seats[o].dev===DEV)s.seats[o]=null;s.seats[seat]={dev:LOCAL?'local':DEV,name};ui.draft[seat]='';commit(s)},
+  stand({seat}){const s=clone(S);s.seats[seat]=null;commit(s)},
+  mode({m}){if(!MODES[m])return;const s=clone(S);s.mode=m;commit(s)},
+  start(){if(!lobbyReady(S)){toast('Servono due giocatori seduti.');return}const g=newGame(S,LOCAL);g.applied=[];ui.view='G';commit(g)},
+  view({p}){ui.view=p;resetSel();render()},
+  ready(){dispatch({t:'ready'})},
+  whisper({tool}){dispatch({t:'whisper',tool})},
+  die({d}){d=+d;const p=me();if(S.phase!=='dadi'||S.turn!==p)return;ui.sel=(ui.sel===d)?null:d;ui.esp=0;ui.pick=null;render()},
+  esp({x}){const n=ui.esp+(+x);if(Math.abs(n)>S.esp)return;ui.esp=n;render()},
+  place(ds){const a={t:'place',d:ui.sel,esp:ui.esp,slot:ds.slot};if(ds.pawn)a.pawn=ds.pawn;if(ds.dir)a.dir=ds.dir;if(ds.steps)a.steps=+ds.steps;if(ds.target!=null)a.target=+ds.target;dispatch(a)},
+  pickTarget({slot,guard}){ui.pick={slot,guard:guard!=null?+guard:0};render()},
+  pickTool({i}){i=+i;if(S.phase!=='dadi'||S.turn!==me())return;ui.pick=(ui.pick&&ui.pick.slot==='tool'&&ui.pick.i===i)?null:{slot:'tool',i};ui.sel=null;render()},
+  cancelPick(){ui.pick=null;render()},
+  cell({i}){i=+i;const P=ui.pick;if(!P)return;
+    if(P.slot==='tool'){dispatch({t:'tool',i:P.i,target:i});return}
+    if(P.slot==='hacker'||P.slot==='div'){dispatch({t:'place',d:ui.sel,esp:ui.esp,slot:P.slot,target:i,guard:P.guard});return}},
+  wink(){dispatch({t:'wink',d:ui.sel})},
+  mind(){dispatch({t:'mindPlay'})},
+  heart(){signal('♥')},
+  log(){ui.fullLog=!ui.fullLog;render()},
+  quit(){ui.confirmQuit=true;render()},
+  quitNo(){ui.confirmQuit=false;render()},
+  quitYes(){ui.confirmQuit=false;if(isHost()||!S||S.status==='lobby'){const s=lobbyFrom(S);commit(s)}else dispatch({t:'toLobby'})},
+  again(){if(isHost()){const r=apply(S,me()||'G',{t:'again'});if(r.ok){r.s.applied=[];commit(r.s)}else toast(r.why)}else dispatch({t:'again'})},
+  toLobby(){if(isHost())commit(lobbyFrom(S));else dispatch({t:'toLobby'})},
+  tip({k}){seen.add(k);saveSeen();render()},
+  resetTips(){seen=new Set();saveSeen();toast('Consigli del tutorial riattivati.');render()}
+};
+function selectLink(){const el=document.getElementById('sharelink');if(el){const r=document.createRange();r.selectNodeContents(el);const sel=getSelection();sel.removeAllRanges();sel.addRange(r)}toast('Copia il link selezionato.')}
+app.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||b.disabled||!document.body.contains(b))return;const f=H[b.dataset.a];if(f)f({...b.dataset})});
+document.addEventListener('click',e=>{const b=e.target.closest('.modal [data-a]');if(!b||app.contains(b))return;const f=H[b.dataset.a];if(f)f({...b.dataset})});
+app.addEventListener('input',e=>{const t=e.target;if(t.dataset.seat)ui.draft[t.dataset.seat]=t.value;if(t.hasAttribute('data-join'))ui.joinCode=t.value});
+app.addEventListener('keydown',e=>{const t=e.target;if(e.key!=='Enter')return;if(t.hasAttribute('data-join')){e.preventDefault();H.join()}else if(t.dataset.seat){e.preventDefault();H.sit({seat:t.dataset.seat})}});
+app.addEventListener('focusout',()=>{setTimeout(()=>{if(pendingRender)render()},300)});
+window.addEventListener('hashchange',()=>{const c=roomFromHash();if(c&&c!==room)joinRoom(c,false)});
+
+/* ---------- consigli del tutorial ---------- */
+function tip(){
+  if(!S||S.status!=='playing'||S.mode!=='facile')return null;const p=me();if(!p)return null;
+  const T=[];const r=S.round,ph=S.phase;
+  if(ph==='piano'&&r===1)T.push(p==='G'
+    ?['g-radio','Sei il <b class="cat">Gatto</b>. Hai la <b>radio</b>: sulla mappa vedi i puntini rossi della guardia e la sua destinazione (D, poi il riquadro vuoto). Non sai cosa c\'è nelle stanze col punto di domanda: te lo dirà la Volpe.']
+    :['v-plan','Sei la <b class="fox">Volpe</b>. Hai la <b>planimetria</b>: vedi tutte le stanze, il Gatto no. Raccontagli la strada per la cassaforte usando le coordinate, tipo «in C2 c\'è una telecamera».']);
+  if(ph==='piano'&&r===1)T.push(['goal','Obiettivo: arrivate <b>entrambi</b> nella cassaforte, apritela e tornate <b>insieme</b> al molo (in basso a sinistra) prima dell\'alba. Il sospetto non deve riempire la barra rossa.']);
+  if(ph==='piano'&&r===2)T.push(['split','Movimento diviso: <b class="cat">il Gatto sposta chiunque in verticale ↑↓</b>, <b class="fox">la Volpe sposta chiunque in orizzontale ←→</b>. Per andare in diagonale vi servite a vicenda: decidete adesso chi sposta chi.']);
+  if(ph==='piano'&&r===3)T.push(['gate','Leve e cancelli: un cancello si apre se qualcuno sta sulla leva con la stessa lettera, oppure se l\'altro è già dentro il cancello. Uno tiene la leva, l\'altro entra, poi il primo lo raggiunge.']);
+  if(ph==='piano'&&r===4)T.push(['div','Petardo: con un 5 o un 6 mandate la guardia dove volete. Il Gatto vede dove sta andando: usatelo prima che vi trovi.']);
+  if(ph==='dadi'&&r===1)T.push(['silence','<b>Silenzio radio.</b> Da ora non si parla e non si fanno gesti: si piazza un dado a testa, a turno, e ogni dado agisce subito. Il <b>Ballo</b> è obbligatorio per tutti e due: dadi uguali regalano un espresso, dadi lontani 4 o più attirano sguardi.']);
+  if(ph==='dadi'&&r===2)T.push(['dice2','Un <b>6</b> nei Passi fa fare due passi. Un <b>espresso</b> cambia un dado di ±1. Il Gatto <b>hackera</b> telecamere (2+) e laser (4+) a distanza, su qualsiasi stanza; la Volpe <b>scassina</b> le serrature vicine con il numero esatto.']);
+  if(ph==='dadi'&&r===3)T.push(['wink','<b>Occhiolino</b>: una volta per rintocco puoi mostrare all\'altro il tuo dado più alto, il più basso o l\'unico che ti resta. È l\'unico modo di «parlare» durante i dadi.']);
+  if(ph==='dadi'&&r===2&&S.tools[p].length)T.push(['tools','I tuoi <b>attrezzi</b> si usano nel tuo turno senza spendere dadi: grimaldello sulle serrature, specchio su telecamere e laser, osso sui cani, fumogeno contro le guardie.']);
+  if(ph==='mind')T.push(['mind','<b>La cassaforte.</b> Ognuno ha dei numeri segreti. Dovete giocarli tutti, insieme, in ordine crescente: niente parole, niente segni. Se hai un numero basso, giocalo presto; se è alto, aspetta. Un errore costa sospetto.']);
+  if(S.loot&&ph==='piano')T.push(['loot','Avete la maschera! Ora tornate tutti e due al molo. Attenzione: le guardie adesso sono più veloci.']);
+  for(const [k,t] of T)if(!seen.has(k))return {k,t};
+  return null;
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  const ae=document.activeElement;
+  if(ae&&ae.tagName==='INPUT'&&app.contains(ae)){pendingRender=true;return}
+  pendingRender=false;
+  let h='';
+  if(!room&&!LOCAL)h=homeHTML();
+  else if(!S)h=statusLine()+'<p class="muted" style="padding:40px 0">Collegamento alla stanza…</p>';
+  else if(S.status==='lobby')h=lobbyHTML();
+  else h=gameHTML();
+  app.innerHTML=h;
+  let m=document.getElementById('modal');
+  if(ui.rules){if(!m){m=document.createElement('div');m.id='modal';m.className='modal';document.body.appendChild(m)}m.innerHTML=rulesHTML()}else if(m)m.remove();
+}
+function statusLine(){
+  if(LOCAL)return `<div class="status"><span><span class="dot"></span>Su un solo telefono</span><button class="btn small ghost" data-a="home">Esci</button></div>`;
+  const t={off:'non connesso',connecting:'connessione…',on:'connesso',retry:'riconnessione…',fail:'impossibile collegarsi: controlla internet',nolib:'libreria di rete non caricata: ricarica la pagina'}[net]||net;
+  return `<div class="status"><span><span class="dot${net==='on'?'':' off'}"></span>Stanza <b class="mono">${esc(room)}</b> · ${t}</span><button class="btn small ghost" data-a="home">Esci</button></div>`;
+}
+function homeHTML(){
+  return `<header class="hero">
+    <span class="lbl eyebrow">Cooperativo per due · a distanza · 25–40 minuti</span>
+    <h1>Il Gatto <span class="amp">&amp;</span> la Volpe</h1>
+    <p class="sub">Venezia, notte di Carnevale. Nel Palazzo Corvaro è esposta la Maschera d'Oro. Avete fino all'alba per rubarla e sparire in gondola.</p>
+  </header>
+  <div class="stack" style="margin-top:12px">
+    <button class="btn primary wide" data-a="create">Crea una partita</button>
+    <div class="row" style="flex-wrap:nowrap"><input type="text" data-join placeholder="Codice, es. GONDOLA-4821" value="${esc(ui.joinCode)}" autocomplete="off" autocapitalize="characters"><button class="btn" data-a="join">Entra</button></div>
+    <p class="note">Se ti hanno mandato un link, aprilo e basta. Nessuna registrazione.</p>
+    <div class="row"><button class="btn ghost" data-a="rules">Come si gioca</button><button class="btn ghost" data-a="local">Prova su un solo telefono</button></div>
+  </div>
+  <section class="card" style="margin-top:22px">
+    <span class="lbl">Dieci giochi cooperativi in uno</span>
+    <div class="origins">${ORIGINS.map(([g,t])=>`<div><b>${g}</b><span>${t}</span></div>`).join('')}</div>
+  </section>`;
+}
+const ORIGINS=[
+  ['Sky Team','Dadi segreti piazzati a turno in silenzio, il Ballo da bilanciare e gli espresso che cambiano i dadi.'],
+  ['Magic Maze','Il Gatto sposta chiunque in verticale, la Volpe chiunque in orizzontale.'],
+  ['Keep Talking','La Volpe ha la planimetria, il Gatto la radio delle guardie: nessuno dei due vede tutto.'],
+  ['Burgle Bros','Guardie di ronda verso destinazioni segrete, serrature da aprire col numero giusto, cani che abbaiano.'],
+  ['Portal 2','Leve e cancelli: uno tiene aperto, l\'altro passa.'],
+  ['It Takes Two','Poteri diversi: il Gatto hackera, la Volpe scassina.'],
+  ['Pandemic','Il sospetto sale, le guardie accelerano, in avanzata arriva un secondo guardiano.'],
+  ['The Mind','La cassaforte: numeri giocati in ordine crescente senza parlare.'],
+  ['Hanabi','In avanzata vedi gli attrezzi dell\'altro ma non i tuoi: servono i sussurri.'],
+  ['The Crew','L\'occhiolino: mostrare un solo dado, il più alto o il più basso.']
+];
+function lobbyHTML(){
+  const seat=(p)=>{const s=S.seats[p];const mine=s&&(LOCAL||s.dev===DEV);
+    const role=p==='G'?'Radio delle guardie · muove ↑↓ · hacker':'Planimetria del palazzo · muove ←→ · scasso';
+    let body;
+    if(s)body=`<p><b>${esc(s.name)}</b> ${mine&&!LOCAL?'<span class="pill on">sei tu</span>':''}</p>${mine||LOCAL?`<button class="btn small ghost" data-a="stand" data-seat="${p}">Lascia il posto</button>`:''}`;
+    else body=`<div class="row" style="flex-wrap:nowrap"><input type="text" data-seat="${p}" placeholder="Il tuo nome" maxlength="18" value="${esc(ui.draft[p])}"><button class="btn" data-a="sit" data-seat="${p}">Siediti</button></div>`;
+    return `<section class="card seat"><h3 class="${p==='G'?'cat':'fox'}">${p==='G'?'Il Gatto':'La Volpe'}</h3><p class="note">${role}</p>${body}</section>`};
+  const modes=Object.entries(MODES).map(([k,m])=>`<button class="mode" data-a="mode" data-m="${k}" aria-pressed="${S.mode===k}"><b>${k==='facile'?'Facile':'Avanzata'}</b><span>${k==='facile'?'Tutorial guidato, palazzo 4×4, una guardia lenta, 10 rintocchi.':'Palazzo 5×5, guardie veloci, secondo guardiano, attrezzi alla cieca, 11 rintocchi.'}</span></button>`).join('');
+  return statusLine()+`<div class="stack">
+    <h2 style="font-size:34px;font-style:italic">Il tavolo</h2>
+    ${LOCAL?'<p class="note">Due ruoli sullo stesso telefono: utile per imparare. Puoi passare da una vista all\'altra durante la partita.</p>':`<section class="card"><span class="lbl">Invita</span><p class="code">${esc(room)}</p><p class="share" id="sharelink">${esc(shareUrl())}</p><button class="btn" data-a="copy">Copia il link</button><p class="note">Chi è il Gatto tiene la partita: la sua pagina deve restare aperta mentre giocate.</p></section>`}
+    ${seat('G')}${seat('V')}
+    <section class="card"><span class="lbl">Modalità</span><div class="modes">${modes}</div></section>
+    <button class="btn primary wide" data-a="start" ${lobbyReady(S)?'':'disabled'}>Entrate a palazzo</button>
+    <button class="btn ghost" data-a="rules">Come si gioca</button>
+  </div>`;
+}
+
+function hudHTML(){
+  const cfg=cfgOf(S);let bars='';for(let k=0;k<cfg.susMax;k++)bars+=`<i class="${k<S.sus?'on':''} ${k===cfg.speedUpAt-1?'warn':''}"></i>`;
+  let cups='';for(let k=0;k<3;k++)cups+=`<span class="${k<S.esp?'':'empty'}" style="color:var(--gold2)">${ICON.cup}</span>`;
+  return `<div class="hud">
+    <div class="bell"><span class="lbl">Rintocco</span><b>${S.round}/${cfg.rounds}</b></div>
+    <div class="sus"><span class="lbl">Sospetto ${S.sus}/${cfg.susMax}${S.loot?' · <span class="gold">maschera presa</span>':''}</span><div class="susbar">${bars}</div></div>
+    <div class="bell"><span class="lbl">Espresso</span><span class="cups">${cups}</span></div>
+  </div>`;
+}
+function boardHTML(){
+  const p=me(),n=S.n,cfg=cfgOf(S);
+  const radio=p==='G';const pathCells=new Map();const dests=new Map();
+  if(radio)S.guards.forEach((g,k)=>{const path=bfs(S,g.at,g.dest)||[];path.slice(1).forEach(c=>pathCells.set(c,true));dests.set(g.dest,(dests.get(g.dest)||'')+`<span class="dest">D${S.guards.length>1?k+1:''}</span>`);if(g.next!==g.dest)dests.set(g.next,(dests.get(g.next)||'')+`<span class="dest nx" style="top:${dests.has(g.next)?'38px':'22px'}">${S.guards.length>1?k+1:''}→</span>`)});
+  let targets=null;const P=ui.pick;
+  if(P&&S.phase==='dadi'&&S.turn===p){if(P.slot==='tool')targets=new Set(toolTargets(S,p,P.i));else targets=new Set([...Array(n*n).keys()])}
+  let hints=new Set();
+  if(ui.sel!=null&&!P&&S.phase==='dadi'&&S.turn===p)for(const o of slotOptions(S,p,ui.sel,ui.esp))if(o.slot==='passi')hints.add(o.path[o.path.length-1]);
+  let cells='';
+  for(let i=0;i<n*n;i++){const r=S.rooms[i];const show=p==='V'||r.rev||r.t==='molo'||(S.status!=='playing');
+    const cls=['cell'];if(show)cls.push('t-'+r.t,'rev');else cls.push('unk');
+    if(show&&(r.off||r.open||r.calm))cls.push('off');
+    if(targets&&targets.has(i))cls.push('target');else if(hints.has(i))cls.push('hint');
+    let inner='';
+    if(show){inner+=ICON[r.t]?`<span class="ic">${ICON[r.t]}</span>`:'';if(r.t==='lock')inner+=`<span class="k">${r.open?'aperta':r.k}</span>`;if(r.t==='leva'||r.t==='gate')inner+=`<span class="k">${r.k}</span>`;if(r.t==='dog'&&r.awake&&!r.calm)inner+=`<span class="k bad">!</span>`;if(r.t==='vault'&&S.loot)inner+=`<span class="k">vuota</span>`}
+    else inner+='<span class="q">?</span>';
+    const[rr,cc]=[Math.floor(i/n),i%n];
+    for(const d of ['N','E','S','O']){const j=neighbor(S,i,d);if(j>=0&&!openEdge(S,i,j))inner+=`<i class="w ${d}"></i>`}
+    if(pathCells.has(i))inner+='<span class="path"></span>';
+    if(dests.has(i))inner+=dests.get(i);
+    let toks='';for(const q of SEATS)if(S.pawns[q]===i)toks+=`<span class="tok ${q}${q===p?' me':''}" title="${CAP[q]}">${q}</span>`;
+    S.guards.forEach((g,k)=>{if(g.at===i)toks+=`<span class="tok guard" title="Guardia">${S.guards.length>1?'G'+(k+1):'!'}</span>`});
+    inner+=`<span class="toks">${toks}</span><span class="cd">${coord(S,i)}</span>`;
+    const label=`${coord(S,i)}${show?' '+RNAME[r.t]:''}`;
+    cells+=targets&&targets.has(i)?`<button type="button" class="${cls.join(' ')}" data-a="cell" data-i="${i}" aria-label="${label}">${inner}</button>`:`<div class="${cls.join(' ')}" aria-label="${label}">${inner}</div>`;
+  }
+  const cols=[...'ABCDE'].slice(0,n).map(c=>`<span>${c}</span>`).join(''),rows=Array.from({length:n},(_,k)=>`<span>${k+1}</span>`).join('');
+  return `<div class="boardwrap"><span></span><div class="colh" style="grid-template-columns:repeat(${n},1fr)">${cols}</div>
+    <div class="rowh" style="grid-template-rows:repeat(${n},1fr)">${rows}</div>
+    <div class="board" style="grid-template-columns:repeat(${n},1fr);grid-template-rows:repeat(${n},1fr)">${cells}</div></div>`;
+}
+function tipHTML(){const t=tip();if(!t)return'';return `<div class="tip"><span class="lbl">Tutorial</span><p>${t.t}</p><button class="btn small" data-a="tip" data-k="${t.k}" style="align-self:flex-start">Capito</button></div>`}
+function toolsHTML(p,mode){ // mode: 'plan'|'play'
+  const cfg=cfgOf(S),o=other(p);let h='';
+  const mine=S.tools[p].map((c,i)=>{
+    const known=!cfg.blind||c.known;const nm=known?TOOLS[cfg.blind?c.known:c.t]:'Attrezzo nascosto';
+    const sub=known?TOOL_HELP[cfg.blind?c.known:c.t]:(c.not.length?'non è: '+c.not.map(t=>TOOLS[t]).join(', '):'non sai cos\'è');
+    const can=mode==='play'&&S.turn===p&&toolTargets(S,p,i).length>0;
+    const sel=ui.pick&&ui.pick.slot==='tool'&&ui.pick.i===i;
+    return `<button type="button" class="tool${known?'':' blind'}${sel?' sel':''}" data-a="pickTool" data-i="${i}" ${can?'':'disabled'}><b>${nm}</b><span>${sub}</span></button>`}).join('');
+  h+=`<div class="stack" style="gap:6px"><span class="lbl">I tuoi attrezzi${cfg.blind?' · li vedi solo grazie ai sussurri':''}${mode==='play'?' · si usano senza dadi':''}</span><div class="hand">${mine||'<span class="note">Nessuno.</span>'}</div></div>`;
+  if(cfg.blind){h+=`<div class="stack" style="gap:6px"><span class="lbl">Attrezzi ${o==='G'?'del Gatto':'della Volpe'} (li vedi solo tu)</span><div class="hand">${S.tools[o].map(c=>`<div class="tool" style="cursor:default"><b>${TOOLS[c.t]}</b><span>${c.known?'lo sa':'non lo sa'}</span></div>`).join('')}</div></div>`}
+  return h;
+}
+function radioHTML(p){
+  if(p==='G'){const sp=guardSpeed(S);return `<div class="stack" style="gap:6px"><span class="lbl">La tua radio</span><ul class="radio">${S.guards.map((g,k)=>`<li>Guardia${S.guards.length>1?' '+(k+1):''} in <b class="mono">${coord(S,g.at)}</b> → va verso <b class="mono bad">${coord(S,g.dest)}</b>, poi <b class="mono">${coord(S,g.next)}</b>. Fa ${sp} pass${sp>1?'i':'o'} a rintocco.</li>`).join('')}</ul><p class="note">La Volpe non vede dove vanno le guardie: diglielo tu.</p></div>`}
+  return `<div class="stack" style="gap:6px"><span class="lbl">La tua planimetria</span><p class="small">Vedi tutte le stanze, con i numeri delle serrature e le lettere di leve e cancelli. Il Gatto vede solo le stanze già esplorate: guidalo tu.</p></div>`;
+}
+function phaseHTML(){
+  const p=me(),cfg=cfgOf(S),o=p?other(p):null;
+  if(S.status!=='playing')return endHTML();
+  if(!p)return `<div class="phase"><p class="note">Stai guardando la partita.</p></div>`;
+  if(S.phase==='piano'){
+    let whisper='';
+    if(cfg.blind)whisper=`<div class="stack" style="gap:6px"><span class="lbl">Sussurro (uno per rintocco)</span>${S.whisper[p]?'<p class="note">Hai già sussurrato in questo rintocco.</p>':`<p class="note">Indica all'altro tutti i suoi attrezzi di un tipo. Non dirglieli a voce.</p><div class="row">${Object.keys(TOOLS).map(t=>`<button class="btn small" data-a="whisper" data-tool="${t}">${TOOLS[t]}</button>`).join('')}</div>`}</div>`;
+    return `<div class="phase">
+      <div class="phead"><h2>Piano</h2><span class="lbl good">Potete parlare</span></div>
+      ${tipHTML()}
+      ${radioHTML(p)}
+      ${toolsHTML(p,'plan')}${whisper}
+      <div class="ready"><div class="row"><span class="pill ${S.ready.G?'on':''}">Gatto ${S.ready.G?'pronto':'…'}</span><span class="pill ${S.ready.V?'on':''}">Volpe ${S.ready.V?'pronta':'…'}</span></div>
+      <button class="btn ${S.ready[p]?'':'primary'}" data-a="ready" ${ui.pending?'disabled':''}>${S.ready[p]?'Non ancora':'Pronti: tirate i dadi'}</button></div>
+    </div>`;
+  }
+  if(S.phase==='mind'){
+    const mine=S.mind[p],theirs=S.mind[o];
+    return `<div class="phase">
+      <div class="phead"><h2>La cassaforte</h2><span class="lbl bad">Silenzio assoluto</span></div>
+      <div class="silence">${ICON.hush}<span>Niente parole, niente segni, niente sospiri strategici. Giocate tutti i numeri in ordine crescente.</span></div>
+      ${tipHTML()}
+      <span class="lbl">I tuoi numeri</span>
+      <div class="mind">${mine.map(x=>`<div class="mcard">${x}</div>`).join('')||'<p class="note">Hai finito i tuoi numeri: ora tocca all\'altro.</p>'}</div>
+      <p class="small">${o==='G'?'Il Gatto':'La Volpe'} ha ancora <b>${theirs.length}</b> ${theirs.length===1?'numero':'numeri'}.</p>
+      <div class="stack" style="gap:6px"><span class="lbl">Sul tavolo</span><div class="pile">${S.mind.pile.map(x=>`<span>${x}</span>`).join('')}${S.mind.lost.map(x=>`<span class="x">${x}</span>`).join('')}${!S.mind.pile.length&&!S.mind.lost.length?'<span class="note" style="border:0;background:none">ancora niente</span>':''}</div></div>
+      <button class="btn primary wide" data-a="mind" ${mine.length&&!ui.pending?'':'disabled'}>${mine.length?`Gioca il ${mine[0]}`:'Aspetta l\'altro'}</button>
+    </div>`;
+  }
+  // dadi
+  const myTurn=S.turn===p;
+  const ball=k=>S.slots.ballo[k]!=null?dieSm(S.slots.ballo[k],k):'<span class="note">vuoto</span>';
+  const slots=`<div class="slots">
+    <div class="slot ${S.slots.ballo.G!=null?'full':''}"><span>Ballo <span class="cat">Gatto</span></span>${ball('G')}</div>
+    <div class="slot ${S.slots.ballo.V!=null?'full':''}"><span>Ballo <span class="fox">Volpe</span></span>${ball('V')}</div>
+    <div class="slot ${S.slots.caffe?'full':''}"><span>Caffè</span>${S.slots.caffe?dieSm(S.slots.caffe.v,S.slots.caffe.p):'<span class="note">libero</span>'}</div>
+    <div class="slot ${S.slots.div?'full':''}"><span>Petardo</span>${S.slots.div?dieSm(S.slots.div.v,S.slots.div.p):`<span class="note">${cfg.divMin}+</span>`}</div>
+  </div>`;
+  const winks=S.winkShow.length?`<div class="chips">${S.winkShow.map(w=>`<span class="chip">${dieSm(w.v,w.p)} occhiolino ${w.p==='G'?'del Gatto':'della Volpe'}: ${w.tag}</span>`).join('')}</div>`:'';
+  const placed=S.placed.length?`<div class="stack" style="gap:6px"><span class="lbl">Piazzati in questo rintocco</span><div class="chips">${S.placed.map(x=>`<span class="chip">${dieSm(x.v,x.p)} ${slotName(x)}</span>`).join('')}</div></div>`:'';
+  const myDice=S.dice[p].map((d,i)=>dieHTML(d.v,`${p} ${d.used?'used':''} ${ui.sel===i?'sel':''}`,`data-a="die" data-d="${i}" ${d.used||!myTurn||ui.pending?'disabled':''}`)).join('');
+  let actions='';
+  if(myTurn&&ui.sel!=null&&!ui.pick)actions=actionsHTML(p);
+  if(myTurn&&ui.pick)actions=pickHTML();
+  return `<div class="phase">
+    <div class="phead"><h2>Dadi</h2><span class="turn ${myTurn?'gold':'muted'}">${myTurn?'Tocca a te':`Tocca ${S.turn==='G'?'al Gatto':'alla Volpe'}`}</span></div>
+    <div class="silence">${ICON.hush}<span><b>Silenzio radio.</b> Non si parla finché non sono piazzati tutti i dadi. ${left(S,o)} dad${left(S,o)===1?'o':'i'} ancora in mano ${o==='G'?'al Gatto':'alla Volpe'}.</span></div>
+    ${tipHTML()}
+    ${slots}${winks}${placed}
+    <div class="stack" style="gap:6px"><span class="lbl">I tuoi dadi${myTurn?' · scegline uno':''}</span><div class="dice">${myDice}</div></div>
+    ${actions}
+    ${myTurn&&ui.sel==null&&!ui.pick?'<p class="note">Tocca un dado per vedere che cosa puoi farci. Gli attrezzi si usano anche senza dado.</p>':''}
+    ${toolsHTML(p,'play')}
+  </div>`;
+}
+function slotName(x){const n={passi:`passi ${x.pawn?(x.pawn==='G'?'Gatto':'Volpe')+' '+ARROW[x.dir]:''}`,ballo:'ballo',caffe:'caffè',div:'petardo',hacker:'hacker'+(x.target!=null?' '+coord(S,x.target):''),scasso:'scasso',pausa:'pausa'};return n[x.slot]||x.slot}
+function actionsHTML(p){
+  const cfg=cfgOf(S),d=S.dice[p][ui.sel];const v=dieValue(S,p,ui.sel,ui.esp);
+  const opts=slotOptions(S,p,ui.sel,ui.esp);const o=other(p);
+  let esp='';
+  if(S.esp>0)esp=`<div class="esp"><span class="lbl">Espresso</span><button class="btn small" data-a="esp" data-x="-1" ${Math.abs(ui.esp-1)>S.esp||v<=1?'disabled':''}>−1</button><b class="mono">${d.v}${ui.esp?` → ${v}`:''}</b><button class="btn small" data-a="esp" data-x="1" ${ui.esp+1>S.esp||v>=6?'disabled':''}>+1</button><span class="note">${ui.esp?`costa ${Math.abs(ui.esp)}`:'cambia il dado di ±1'}</span></div>`;
+  const tag=winkTag(S,p,ui.sel);const canWink=tag&&S.winks[p]<cfg.winkRound&&S.winksGame[p]<cfg.winkGame;
+  const wink=canWink&&!ui.esp?`<button class="btn small ghost" data-a="wink">Occhiolino: mostra che il ${d.v} è ${tag}${cfg.winkGame<99?` (ne restano ${cfg.winkGame-S.winksGame[p]})`:''}</button>`:'';
+  const btn=(attrs,title,sub,val)=>`<button type="button" class="act" ${attrs}><b>${title}</b><span>${sub}</span><em>${val||''}</em></button>`;
+  const rows=[];const must=left(S,p)===1&&S.slots.ballo[p]==null;
+  for(const x of opts.filter(x=>x.slot==='passi')){
+    const who=x.pawn==='G'?'il Gatto':'la Volpe';const dest=x.path[x.path.length-1];
+    rows.push(btn(`data-a="place" data-slot="passi" data-pawn="${x.pawn}" data-dir="${x.dir}" data-steps="${x.steps}"`,`Muovi ${who} ${ARROW[x.dir].repeat(x.steps)}`,`Passi · arriva in ${coord(S,dest)}${stepWarn(x.path)}`,x.steps===2?'2 passi':''));
+    if(x.steps===2)rows.push(btn(`data-a="place" data-slot="passi" data-pawn="${x.pawn}" data-dir="${x.dir}" data-steps="1"`,`Muovi ${who} ${ARROW[x.dir]}`,`Passi · solo un passo, fino a ${coord(S,x.path[0])}${stepWarn(x.path.slice(0,1))}`,'1 passo'));
+  }
+  if(!opts.some(x=>x.slot==='passi')&&!must)rows.push(`<p class="note">Con questo dado nessuno può muoversi nelle tue direzioni (${DIRS[p].map(x=>ARROW[x]).join(' ')}).</p>`);
+  for(const x of opts){
+    if(x.slot==='ballo'){const ov=S.slots.ballo[o];rows.push(btn(`data-a="place" data-slot="ballo"`,'Ballo',ov!=null?`${o==='G'?'Il Gatto':'La Volpe'} ha messo un ${ov}: ${v===ov?'uguale, +1 espresso':Math.abs(v-ov)>=cfg.balloBad?'troppo distante, sospetto +1':'abbastanza vicino, nessun effetto'}`:'Obbligatorio. Uguale a quello dell\'altro: +1 espresso',must?'obbligatorio':''))}
+    if(x.slot==='caffe')rows.push(btn(`data-a="place" data-slot="caffe"`,'Caffè al bar','+1 espresso (massimo 3). Uno per rintocco.'));
+    if(x.slot==='div'){if(S.guards.length>1)S.guards.forEach((g,k)=>rows.push(btn(`data-a="pickTarget" data-slot="div" data-guard="${k}"`,`Petardo: guardia ${k+1}`,`Ora in ${coord(S,g.at)}. Poi tocca la stanza dove mandarla.`)));
+      else rows.push(btn(`data-a="pickTarget" data-slot="div" data-guard="0"`,'Petardo','Manda la guardia dove vuoi: poi tocca la stanza.'))}
+    if(x.slot==='hacker')rows.push(btn(`data-a="pickTarget" data-slot="hacker"`,'Hacker',`Spegni una telecamera (${cfg.hackCam}+) o un laser (${cfg.hackLaser}+) in qualsiasi stanza: poi tocca la stanza.`,v>=cfg.hackLaser?'laser ok':v>=cfg.hackCam?'telecamere':'troppo basso'));
+    if(x.slot==='scasso')rows.push(btn(`data-a="place" data-slot="scasso" data-target="${x.target}"`,`Scassina ${coord(S,x.target)}`,'Il numero è giusto: la serratura si apre.'));
+  }
+  if(p==='V'&&!opts.some(x=>x.slot==='scasso')){const locks=adjacentOpen(S,S.pawns.V).filter(t=>S.rooms[t].t==='lock'&&!S.rooms[t].open);if(locks.length&&!must)rows.push(`<p class="note">Serratura vicina in ${locks.map(t=>coord(S,t)+' (serve '+S.rooms[t].k+')').join(', ')}: con questo dado non si apre.</p>`)}
+  if(opts.some(x=>x.slot==='pausa'))rows.push(btn(`data-a="place" data-slot="pausa"`,'Pausa','Scarta il dado senza effetto.'));
+  return `<div class="stack" style="gap:8px">${esp}${wink}<div class="acts">${rows.join('')}</div></div>`;
+}
+function stepWarn(path){const w=[];for(const c of path){const r=S.rooms[c];if(me()==='V'||r.rev){if(r.t==='cam'&&!r.off)w.push('telecamera!');if(r.t==='dog'&&!r.awake&&!r.calm)w.push('cane!')}if(S.guards.some(g=>g.at===c))w.push('guardia!')}return w.length?` · <span class="bad">${w.join(' ')}</span>`:''}
+function pickHTML(){
+  const P=ui.pick;let t='';
+  if(P.slot==='tool'){const c=S.tools[me()][P.i];const cfg=cfgOf(S);t=cfg.blind&&!c.known?'Tocca la stanza su cui provare l\'attrezzo misterioso (vicina o la tua). Se è quello sbagliato, sospetto +1.':`Tocca la stanza su cui usare: ${TOOLS[c.t]}.`}
+  if(P.slot==='hacker')t='Tocca la stanza da hackerare. Se lì non c\'è niente da spegnere, il dado va perso.';
+  if(P.slot==='div')t='Tocca la stanza dove far correre la guardia.';
+  return `<div class="tip"><span class="lbl">Scegli sulla mappa</span><p>${t}</p><button class="btn small" data-a="cancelPick" style="align-self:flex-start">Annulla</button></div>`;
+}
+function endHTML(){
+  const won=S.status==='won';const cfg=cfgOf(S);
+  const why={fuga:'La gondola scivola nella laguna tra i fuochi del Carnevale. La Maschera d\'Oro è vostra.',sospetto:'Il sospetto ha raggiunto il massimo: scatta l\'allarme generale e arrivano i gendarmi.',alba:'Suonano le campane del mattino. Il palazzo si sveglia e voi siete ancora dentro.'}[S.result]||'';
+  return `<div class="phase"><section class="card end ${won?'win':'lose'}">
+    <span class="mask" style="width:84px">${ICON.mask}</span>
+    <h2>${won?'Colpo riuscito':'Colpo fallito'}</h2>
+    <p>${why}</p>
+    <p class="note">Modalità ${cfg.label} · rintocco ${S.round} di ${cfg.rounds} · sospetto ${S.sus}/${cfg.susMax}${S.loot?' · maschera presa':''}</p>
+    <div class="row"><button class="btn primary" data-a="again">Nuovo colpo</button><button class="btn" data-a="toLobby">Cambia modalità</button></div>
+  </section></div>`;
+}
+function logHTML(){
+  const L=S.log||[];const items=(ui.fullLog?L.slice().reverse():L.slice(-6).reverse()).map(l=>`<li class="${l.k}"><span class="r">${l.r}</span>${esc(l.m)}</li>`).join('');
+  return `<section class="stack" style="margin-top:16px;gap:6px"><div class="phead"><span class="lbl">Diario</span><button class="btn small ghost" data-a="log">${ui.fullLog?'Mostra meno':'Tutto il diario'}</button></div><ul class="log">${items}</ul></section>`;
+}
+function gameHTML(){
+  const p=me();
+  const viewSw=LOCAL?`<div class="row" style="margin-top:10px"><span class="lbl">Vista</span><button class="btn small ${ui.view==='G'?'primary':''}" data-a="view" data-p="G">Gatto</button><button class="btn small ${ui.view==='V'?'primary':''}" data-a="view" data-p="V">Volpe</button>${S.phase==='dadi'?'<span class="note">segue il turno</span>':''}</div>`:'';
+  const who=p?`<p class="small" style="margin-top:8px">Sei ${p==='G'?'<b class="cat">il Gatto</b> · muovi ↑↓ · radio e hacker':'<b class="fox">la Volpe</b> · muovi ←→ · planimetria e scasso'}${ui.pending?' · <span class="muted">invio…</span>':''}</p>`:'';
+  const quit=ui.confirmQuit?`<div class="card" style="margin-top:12px"><p>Abbandonare il colpo e tornare al tavolo?</p><div class="row"><button class="btn" data-a="quitYes">Sì, abbandona</button><button class="btn ghost" data-a="quitNo">No</button></div></div>`:'';
+  return statusLine()+hudHTML()+viewSw+who+boardHTML()+phaseHTML()+logHTML()+quit+
+    `<div class="foot"><button class="btn small" data-a="rules">Regole</button><button class="btn small" data-a="heart" aria-label="Manda un cuore"><span style="width:18px;color:var(--crimson)">${ICON.heart}</span></button>${S.status==='playing'?'<button class="btn small ghost" data-a="quit">Abbandona</button>':''}${S.mode==='facile'?'<button class="btn small ghost" data-a="resetTips">Riattiva i consigli</button>':''}</div>`;
+}
+function rulesHTML(){
+  const L=(k,t)=>`<span style="color:var(--gold2)">${ICON[k]}</span><span>${t}</span>`;
+  return `<section class="card rules">
+    <div class="phead"><h2 style="font-size:30px;font-style:italic">Come si gioca</h2><button class="btn small" data-a="closeRules">Chiudi</button></div>
+    <h3>L'obiettivo</h3>
+    <p>Entrate dal molo, raggiungete <b>entrambi</b> la cassaforte, apritela e tornate <b>insieme</b> al molo prima dell'ultimo rintocco. Perdete se il sospetto riempie la barra o se arriva l'alba.</p>
+    <h3>Due ruoli, due metà della verità</h3>
+    <ul><li><b class="cat">Il Gatto</b> ha la <b>radio</b>: vede dove andranno le guardie. Muove <b>chiunque</b> in verticale ↑↓. Può <b>hackerare</b> telecamere e laser in qualsiasi stanza.</li>
+    <li><b class="fox">La Volpe</b> ha la <b>planimetria</b>: vede tutte le stanze, il Gatto solo quelle esplorate. Muove <b>chiunque</b> in orizzontale ←→. Può <b>scassinare</b> le serrature vicine con il numero esatto.</li></ul>
+    <h3>Un rintocco</h3>
+    <ul><li><b>Piano.</b> Parlate liberamente: la Volpe descrive le stanze, il Gatto le guardie. Quando siete pronti tutti e due si tirano i dadi.</li>
+    <li><b>Dadi, in silenzio.</b> Ognuno ha 4 dadi segreti. A turno se ne piazza uno, e agisce subito. Niente parole né gesti fino all'ultimo dado.</li>
+    <li><b>Guardie.</b> Ogni guardia cammina verso la sua destinazione. Se passa dove siete: sospetto +2.</li></ul>
+    <h3>Cosa fa un dado</h3>
+    <ul><li><b>Passi</b>: muove una pedina di una stanza nelle tue direzioni. Un 6 fa due passi.</li>
+    <li><b>Ballo</b> (obbligatorio, uno a testa): dadi uguali danno +1 espresso; troppo diversi danno +1 sospetto.</li>
+    <li><b>Caffè</b> (uno per rintocco): +1 espresso. Un espresso cambia un dado di ±1.</li>
+    <li><b>Petardo</b> (uno per rintocco, 5+ in facile, 6 in avanzata): manda una guardia dove volete.</li>
+    <li><b>Hacker</b> (Gatto) e <b>Scasso</b> (Volpe), <b>Pausa</b> per scartare.</li>
+    <li><b>Occhiolino</b>: puoi mostrare all'altro il tuo dado più alto, il più basso o l'unico rimasto.</li></ul>
+    <h3>Le stanze</h3>
+    <div class="legend">${L('molo','Molo: partenza e fuga.')}${L('vault','Cassaforte: si apre solo se ci siete entrambi alla fine dei dadi.')}${L('cam','Telecamera: entrarci accesa costa 1 sospetto.')}${L('laser','Laser: non si passa finché è acceso.')}${L('lock','Serratura: chiusa finché la Volpe non la apre col numero indicato.')}${L('dog','Cane: se lo svegli, sospetto +1 e la guardia corre lì.')}${L('leva','Leva: tiene aperto il cancello con la stessa lettera.')}${L('gate','Cancello: entri se qualcuno è sulla leva giusta o se l\'altro è già dentro.')}</div>
+    <h3>La cassaforte</h3>
+    <p>Ognuno riceve dei numeri segreti. Giocateli tutti in ordine crescente, senza parlare: chi pensa di avere il numero più basso lo gioca. Se qualcuno aveva un numero più basso, quei numeri si perdono e il sospetto sale di 1.</p>
+    <h3>Attrezzi</h3>
+    <p>Grimaldello, specchio, osso e fumogeno si usano nel tuo turno senza spendere dadi, su una stanza vicina. In avanzata vedi gli attrezzi dell'altro ma non i tuoi: nel piano potete fare un <b>sussurro</b> a testa, che indica tutti gli attrezzi di un tipo. Un attrezzo sbagliato fa rumore: sospetto +1. Regola d'onore: non ditevi a voce gli attrezzi.</p>
+    <h3>Facile e avanzata</h3>
+    <table class="tbl"><tr><th></th><th>Facile</th><th>Avanzata</th></tr>
+    <tr><td>Palazzo</td><td>4×4</td><td>5×5</td></tr><tr><td>Rintocchi</td><td>10</td><td>11</td></tr><tr><td>Sospetto massimo</td><td>8</td><td>7</td></tr>
+    <tr><td>Guardie</td><td>1, lenta</td><td>veloce, + una seconda dopo il furto</td></tr><tr><td>Cassaforte</td><td>2 numeri a testa da 1 a 50</td><td>3 numeri a testa da 1 a 100</td></tr>
+    <tr><td>Attrezzi</td><td>visibili</td><td>alla cieca, con sussurri</td></tr><tr><td>Ballo</td><td>sospetto se distanti 4+</td><td>sospetto se distanti 3+</td></tr></table>
+    <h3>Giocare a distanza</h3>
+    <p>Chi crea la partita manda il link; ognuno sceglie il suo ruolo. Parlate al telefono o in videochiamata e rispettate i silenzi. La pagina del Gatto tiene la partita: deve restare aperta.</p>
+    <button class="btn primary" data-a="closeRules">Ho capito</button>
+  </section>`;
+}
+
+(function boot(){const c=roomFromHash();if(c)joinRoom(c,false);else render()})();
+
+</script>
+</body>
+</html>
