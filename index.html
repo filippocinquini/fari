@@ -385,9 +385,9 @@ function doDiscard(s,i){if(s.phase!=='discard')return false;const x=s.turn,c=s.h
 <script>
 /* ===== Interfaccia e rete (MQTT pubblico, nessun account) ===== */
 const app=document.getElementById('app'),toastEl=document.getElementById('toast');
-const BROKERS=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt'];
+const BROKERS=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt','wss://mqtt.eclipseprojects.io:443/mqtt','wss://test.mosquitto.org:8081/mqtt'];
 const PREFIX='fari-tempesta/v1/';
-let S=null,LOCAL=false,room=null,client=null,net='off',pendingRender=false,gotState=false,remoteRev=0;
+let S=null,LOCAL=false,room=null,client=null,clients=[],conns=[],net='off',pendingRender=false,gotState=false,remoteRev=0;
 const readOnly=false;
 const ui={mode:'move',cardIdx:-1,confirmQuit:false,draft:{A:'',B:''},joinCode:'',flashUntil:0,turnKey:''};
 const DEV=(()=>{const mk=()=>'d'+Math.random().toString(36).slice(2,11);try{let d=localStorage.getItem('faro.dev');if(!d){d=mk();localStorage.setItem('faro.dev',d)}return d}catch(e){return mk()}})();
@@ -412,8 +412,8 @@ function commit(s){
   if(!LOCAL)publishState();
 }
 function publishState(){
-  if(!client||!room||!S)return;
-  try{client.publish(PREFIX+room+'/state',JSON.stringify(S),{qos:1,retain:true})}catch(e){toast('Mossa non inviata: controlla la connessione.')}
+  if(!clients.length||!room||!S)return;
+  if(!pubAll(PREFIX+room+'/state',JSON.stringify(S),{qos:1,retain:true}))toast('Mossa non inviata: controlla la connessione.')
 }
 function flash(){ui.flashUntil=Date.now()+1700;setTimeout(()=>render(),1800)}
 function act(fn){if(!canAct())return;const s=clone(S);if(!fn(s))return;if(s.status==='playing')checkWin(s);commit(s)}
@@ -432,7 +432,8 @@ function normalizeMode(){
 function roomFromHash(){const h=decodeURIComponent(location.hash.slice(1)).toUpperCase().replace(/[^A-Z0-9-]/g,'');return h.length>=4&&h.length<=24?h:null}
 function genCode(){const w=['FARO','ONDA','MOLO','VELA','PERLA','AMBRA','GIADA','SCOGLIO','MAREA','BREZZA','RIVA','BOA'];return w[Math.floor(Math.random()*w.length)]+'-'+(1000+Math.floor(Math.random()*9000))}
 function shareUrl(){return location.origin+location.pathname+'#'+room}
-function closeClient(){if(client){try{client.end(true)}catch(e){}}client=null}
+function closeClient(){for(const c of conns){try{c.end(true)}catch(e){}}conns=[];clients=[];client=null}
+function pubAll(topic,msg,opts){let ok=0;for(const c of clients){try{c.publish(topic,msg,opts);ok++}catch(e){}}return ok}
 
 function joinRoom(code,isNew){
   closeClient();LOCAL=false;room=code;gotState=false;remoteRev=0;
@@ -441,34 +442,33 @@ function joinRoom(code,isNew){
   ui.turnKey='';normalizeMode();render(true);
   connect(0,isNew,code);
 }
+/* Ci si collega a tutti i server insieme e si scrive su tutti quelli raggiungibili:
+   basta che ne funzioni uno in comune perché i due telefoni si vedano. */
 function connect(i,isNew,code){
   if(code!==room)return;
   if(typeof mqtt==='undefined'){net='nolib';if(!S)S=emptyLobby();render(true);return}
-  if(i>=BROKERS.length){net='fail';if(!S)S=emptyLobby();render(true);return}
-  net='connecting';render(true);
-  let c,opened=false;
-  try{c=mqtt.connect(BROKERS[i],{clientId:'fari_'+Math.random().toString(36).slice(2,12),clean:true,connectTimeout:8000,reconnectPeriod:3000,keepalive:30})}
-  catch(e){connect(i+1,isNew,code);return}
-  const timer=setTimeout(()=>{if(!opened){try{c.end(true)}catch(e){}connect(i+1,isNew,code)}},9000);
-  c.on('connect',()=>{
-    if(code!==room){try{c.end(true)}catch(e){}return}
-    opened=true;clearTimeout(timer);client=c;net='on';
-    c.subscribe([PREFIX+room+'/state',PREFIX+room+'/signal'],{qos:1});
-    render();
-    setTimeout(()=>{
-      if(c!==client)return;
-      if(!gotState){if(!S)S=emptyLobby();if(isNew||S.rev>0){commit(clone(S));isNew=false}else render()}
-      else if(S&&S.rev>remoteRev)publishState();
-    },2500);
-  });
-  c.on('message',(topic,buf)=>{
-    if(c!==client)return;let d;
-    try{d=JSON.parse(typeof buf==='string'?buf:new TextDecoder().decode(buf))}catch(e){return}
-    if(topic.endsWith('/state'))onState(d);else onSignal(d);
-  });
-  c.on('offline',()=>{if(c===client){net='retry';render()}});
-  c.on('reconnect',()=>{if(c===client){net='retry';render()}});
-  c.on('error',()=>{});
+  net='connecting';render(true);let first=true;
+  for(const url of BROKERS){
+    let c;try{c=mqtt.connect(url,{clientId:'fari_'+Math.random().toString(36).slice(2,12),clean:true,connectTimeout:9000,reconnectPeriod:5000,keepalive:30})}catch(e){continue}
+    conns.push(c);
+    c.on('connect',()=>{
+      if(code!==room){try{c.end(true)}catch(e){}return}
+      if(!clients.includes(c))clients.push(c);client=clients[0];net='on';
+      c.subscribe([PREFIX+room+'/state',PREFIX+room+'/signal'],{qos:1});render();
+      if(first){first=false;setTimeout(()=>{if(code!==room)return;
+        if(!gotState){if(!S)S=emptyLobby();if(isNew||S.rev>0){commit(clone(S));isNew=false}else render()}
+        else if(S&&S.rev>remoteRev)publishState();
+      },2500)}
+      else setTimeout(()=>{if(code===room&&S&&S.rev>0)try{c.publish(PREFIX+room+'/state',JSON.stringify(S),{qos:1,retain:true})}catch(e){}},1500);
+    });
+    c.on('message',(topic,buf)=>{if(code!==room)return;let d;
+      try{d=JSON.parse(typeof buf==='string'?buf:new TextDecoder().decode(buf))}catch(e){return}
+      if(topic.endsWith('/state'))onState(d);else onSignal(d);
+    });
+    c.on('close',()=>{const k=clients.indexOf(c);if(k>=0){clients.splice(k,1);client=clients[0]||null;if(!clients.length){net='retry';render()}}});
+    c.on('error',()=>{});
+  }
+  setTimeout(()=>{if(code===room&&!clients.length){net='fail';if(!S)S=emptyLobby();render(true)}},11000);
 }
 function onState(d){
   if(!d||d.v!==1||!d.seats)return;
@@ -479,15 +479,17 @@ function onState(d){
   if(prev&&prev.status==='playing'&&S.status!=='playing')flash();
   saveCache();normalizeMode();render();
 }
+const sigSeen=new Set();
 function onSignal(d){
   if(!d||d.dev===DEV||typeof d.t!=='string')return;
+  const sk=d.dev+':'+d.at;if(sigSeen.has(sk))return;sigSeen.add(sk);
   const who=(S&&S.seats&&S.seats[d.from]&&S.seats[d.from].name)||'Compagno';
   toast(`${who}: ${d.t.slice(0,30)}`,d.t==='♥');
 }
 function react(t){
   toast(LOCAL?t:`Tu: ${t}`,t==='♥');
-  if(LOCAL||!client)return;
-  try{client.publish(PREFIX+room+'/signal',JSON.stringify({from:mySeat(),t,dev:DEV,at:Date.now()}),{qos:0})}catch(e){}
+  if(LOCAL||!clients.length)return;
+  pubAll(PREFIX+room+'/signal',JSON.stringify({from:mySeat(),t,dev:DEV,at:Date.now()}),{qos:0})
 }
 function goLocal(){closeClient();room=null;LOCAL=true;history.replaceState(null,'',location.pathname+location.search);S=loadCache()||emptyLobby();ui.turnKey='';normalizeMode();render(true)}
 function goHome(){closeClient();room=null;LOCAL=false;S=null;net='off';history.replaceState(null,'',location.pathname+location.search);render(true)}
