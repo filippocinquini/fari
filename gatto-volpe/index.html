@@ -184,6 +184,13 @@ input[type=text]{font:inherit;min-height:48px;padding:0 14px;border-radius:12px;
 .rules ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
 .legend{display:grid;grid-template-columns:28px 1fr;gap:8px 10px;align-items:center;font-size:14px}
 .legend svg{width:24px;height:24px}
+.legendbox{margin-top:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+.legendbox summary{cursor:pointer;font-weight:700;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);min-height:30px;display:flex;align-items:center}
+.legendbox .legend{margin-top:8px;font-size:13.5px}
+.legendbox .ic2{width:24px;height:24px;color:var(--gold2)}.legendbox .ic2 svg{width:24px;height:24px}
+.ic2.q2{font-family:var(--f-display);font-style:italic;font-size:20px;color:var(--dim);text-align:center}
+.act.blocked{cursor:default;background:var(--bg2);border-style:dashed;border-color:#5c2236}
+.act.blocked b{color:#ffb3bd}.act.blocked em{color:var(--crimson)}
 .tbl{width:100%;border-collapse:collapse;font-size:14px}
 .tbl td,.tbl th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .tbl th{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
@@ -213,12 +220,12 @@ const ART={grim:'il grimaldello',spec:'lo specchio',osso:"l'osso",fumo:'il fumog
 const RNAME={molo:'Molo',vault:'Cassaforte',sala:'Salone',cam:'Telecamera',laser:'Laser',lock:'Serratura',dog:'Cane',leva:'Leva',gate:'Cancello'};
 
 const MODES={
-  facile:{label:'Facile · tutorial',n:4,rounds:10,susMax:8,dice:4,esp0:2,walls:3,hackCam:2,hackLaser:4,divMin:5,balloBad:4,
-    gSpeed:1,speedUpAt:4,lootSpeed:1,guard2:false,mind:{k:2,max:50},hand:2,blind:false,winkRound:1,winkGame:99,
-    rooms:{cam:3,laser:1,lock:2,dog:1,lever:1}},
-  avanzata:{label:"Avanzata",n:5,rounds:11,susMax:7,dice:4,esp0:1,walls:6,hackCam:3,hackLaser:5,divMin:6,balloBad:3,
+  facile:{label:'Facile · tutorial',n:4,rounds:14,susMax:10,dice:4,esp0:2,minWalls:3,maxWalls:9,hackCam:2,hackLaser:4,divMin:5,balloBad:4,
+    gSpeed:1,speedUpAt:5,lootSpeed:1,guard2:false,mind:{k:2,max:50},hand:2,blind:false,winkRound:1,winkGame:99,
+    rooms:{cam:2,laser:0,lock:0,dog:1}},
+  avanzata:{label:"Avanzata",n:5,rounds:13,susMax:8,dice:4,esp0:1,minWalls:6,maxWalls:16,hackCam:3,hackLaser:5,divMin:6,balloBad:3,
     gSpeed:2,speedUpAt:4,lootSpeed:0,guard2:true,mind:{k:3,max:100},hand:3,blind:true,winkRound:1,winkGame:3,
-    rooms:{cam:4,laser:3,lock:3,dog:2,lever:2}}
+    rooms:{cam:3,laser:1,lock:1,dog:2}}
 };
 
 const rnd=n=>Math.floor(Math.random()*n);
@@ -240,48 +247,58 @@ function bfs(s,from,to,block){ // percorso più breve, ordine fisso N,E,S,O
   return null}
 function reach(s,from,block){const seen=new Set([from]),q=[from];while(q.length){const x=q.shift();for(const y of nbrs(s,x)){if(seen.has(y)||(block&&block(y)))continue;seen.add(y);q.push(y)}}return seen}
 
-/* ---------- generazione del palazzo ---------- */
+/* ---------- generazione del palazzo ----------
+   Serratura, laser e cancello stanno su stanze di passaggio obbligato (punti di taglio
+   tra molo e cassaforte): non si possono aggirare. Il cancello ha due leve, una per lato. */
+function cutVertices(s,a,b){const out=[];for(let v=0;v<s.n*s.n;v++){if(v===a||v===b)continue;if(!reach(s,a,x=>x===v).has(b))out.push(v)}return out}
 function genMap(mode){
   const cfg=MODES[mode];
-  for(let attempt=0;attempt<500;attempt++){
+  for(let attempt=0;attempt<5000;attempt++){
     const n=cfg.n,s={n,walls:[]};const N=n*n;const molo=ix(s,n-1,0);
-    // muri
-    const edges=[];for(let i=0;i<N;i++){const[r,c]=rc(s,i);if(c<n-1)edges.push(wkey(i,i+1));if(r<n-1)edges.push(wkey(i,i+n))}
-    shuffle(edges);
-    for(const e of edges){if(s.walls.length>=cfg.walls)break;s.walls.push(e);if(reach(s,0).size!==N)s.walls.pop()}
-    // cassaforte lontana
     const far=[];for(let i=0;i<N;i++)if(dist(s,molo,i)>=n)far.push(i);
     const vault=far[rnd(far.length)];
+    // muri finché non ci sono almeno 3 stanze di passaggio obbligato (non vicine al molo)
+    const edges=[];for(let i=0;i<N;i++){const[r,c]=rc(s,i);if(c<n-1)edges.push(wkey(i,i+1));if(r<n-1)edges.push(wkey(i,i+n))}
+    shuffle(edges);let cuts=[];
+    const usable=()=>cutVertices(s,molo,vault).filter(v=>!nbrs(s,molo).includes(v));
+    for(const e of edges){if(s.walls.length>=cfg.maxWalls)break;s.walls.push(e);if(reach(s,0).size!==N){s.walls.pop();continue}
+      if(s.walls.length>=cfg.minWalls&&usable().length>=3)break}
+    cuts=usable();if(cuts.length<3)continue;
+    const allCuts=new Set(cutVertices(s,molo,vault));
+    shuffle(cuts);const [cLock,cLaser,cGate]=cuts;
     const rooms=Array.from({length:N},()=>({t:'sala'}));
     rooms[molo]={t:'molo',rev:true};rooms[vault]={t:'vault'};
-    const nearMolo=new Set(nbrs(s,molo));
-    const free=shuffle([...Array(N).keys()].filter(i=>i!==molo&&i!==vault));
+    rooms[cLock]={t:'lock',k:1+rnd(6),open:false,key:true};
+    rooms[cLaser]={t:'laser',off:false,key:true};
+    rooms[cGate]={t:'gate',k:'A',key:true};
+    const taken=new Set([molo,vault,cLock,cLaser,cGate]);
+    const outer=[...reach(s,molo,x=>x===cGate)].filter(i=>!taken.has(i)&&!allCuts.has(i));
+    const inner=[...reach(s,vault,x=>x===cGate)].filter(i=>!taken.has(i)&&!allCuts.has(i));
+    if(!outer.length||!inner.length)continue;
+    const l1=outer[rnd(outer.length)],l2=inner[rnd(inner.length)];
+    rooms[l1]={t:'leva',k:'A'};rooms[l2]={t:'leva',k:'A'};taken.add(l1);taken.add(l2);
+    // il molo deve avere un vicino libero
+    if(!nbrs(s,molo).some(i=>!taken.has(i)||rooms[i].t==='leva'))continue;
+    const R=cfg.rooms;
+    // una telecamera sulla strada più breve, il resto a caso
+    const route=(bfs(s,molo,vault)||[]).filter(i=>!taken.has(i));
+    const free=shuffle([...Array(N).keys()].filter(i=>!taken.has(i)));
     const take=(ok)=>{const k=free.findIndex(ok);if(k<0)return -1;return free.splice(k,1)[0]};
-    const R=cfg.rooms;let fail=false;
-    const letters=['A','B'];
-    for(let l=0;l<R.lever;l++){
-      const lv=take(i=>!nearMolo.has(i)||true);const gt=take(i=>!nearMolo.has(i)&&dist(s,i,lv)>=2);
-      if(lv<0||gt<0){fail=true;break}
-      rooms[lv]={t:'leva',k:letters[l]};rooms[gt]={t:'gate',k:letters[l]};
-    }
+    let fail=false;
+    if(R.cam>0){const i=take(i=>route.includes(i));const j=i>=0?i:take(()=>true);if(j<0)fail=true;else rooms[j]={t:'cam',off:false}}
+    for(let k=1;k<R.cam&&!fail;k++){const i=take(()=>true);if(i<0)fail=true;else rooms[i]={t:'cam',off:false}}
+    for(let k=0;k<R.dog&&!fail;k++){const i=take(()=>true);if(i<0)fail=true;else rooms[i]={t:'dog',awake:false,calm:false}}
+    for(let k=0;k<R.laser&&!fail;k++){const i=take(i=>!nbrs(s,molo).includes(i));if(i<0)fail=true;else rooms[i]={t:'laser',off:false}}
+    for(let k=0;k<R.lock&&!fail;k++){const i=take(i=>!nbrs(s,molo).includes(i));if(i<0)fail=true;else rooms[i]={t:'lock',k:1+rnd(6),open:false}}
     if(fail)continue;
-    for(let k=0;k<R.laser;k++){const i=take(i=>!nearMolo.has(i));if(i<0){fail=true;break}rooms[i]={t:'laser',off:false}}
-    for(let k=0;k<R.lock;k++){const i=take(i=>!nearMolo.has(i));if(i<0){fail=true;break}rooms[i]={t:'lock',k:1+rnd(6),open:false}}
-    for(let k=0;k<R.dog;k++){const i=take(()=>true);if(i<0){fail=true;break}rooms[i]={t:'dog',awake:false,calm:false}}
-    for(let k=0;k<R.cam;k++){const i=take(()=>true);if(i<0){fail=true;break}rooms[i]={t:'cam',off:false}}
-    if(fail)continue;
-    s.rooms=rooms;
-    // risolvibilità: ogni leva raggiungibile senza passare dai cancelli; cassaforte raggiungibile
-    const isGate=i=>rooms[i].t==='gate';
-    const r0=reach(s,molo,isGate);
-    if(rooms.some((x,i)=>x.t==='leva'&&!r0.has(i)))continue;
-    if(!reach(s,molo).has(vault))continue;
-    // il molo deve avere almeno un vicino libero
     if(!nbrs(s,molo).some(i=>['sala','cam','dog','leva'].includes(rooms[i].t)))continue;
     return {n,walls:s.walls,rooms,molo,vault};
   }
   throw new Error('mappa non generata');
 }
+/* ostacoli obbligati nell'ordine in cui si incontrano andando dal molo alla cassaforte */
+function keyObstacles(s){const p=bfs(s,s.molo,s.vault)||[];return p.filter(i=>s.rooms[i].key)}
+function levers(s,letter){const out=[];s.rooms.forEach((r,i)=>{if(r.t==='leva'&&r.k===letter)out.push(i)});return out}
 
 function randomDest(s,not){let i;do{i=rnd(s.n*s.n)}while(i===not);return i}
 
@@ -314,13 +331,15 @@ function lobbyFrom(s){return {v:1,rev:s.rev,status:'lobby',mode:s.mode,host:s.ho
 /* ---------- regole di movimento ---------- */
 function onLever(s,letter,except){return SEATS.some(p=>p!==except&&s.rooms[s.pawns[p]].t==='leva'&&s.rooms[s.pawns[p]].k===letter)}
 function canEnter(s,mover,from,to){
-  if(to<0||!openEdge(s,from,to))return {ok:false,why:'muro'};
-  const r=s.rooms[to];
-  if(r.t==='lock'&&!r.open)return {ok:false,why:`serratura chiusa (${coord(s,to)})`};
-  if(r.t==='laser'&&!r.off)return {ok:false,why:`laser acceso (${coord(s,to)})`};
-  if(r.t==='gate'){const o=other(mover);if(!(onLever(s,r.k,mover)||s.pawns[o]===to))return {ok:false,why:`cancello ${r.k} chiuso`}}
+  if(to<0||!openEdge(s,from,to))return {ok:false,wall:true,why:'muro'};
+  const r=s.rooms[to],cfg=cfgOf(s),w=coord(s,to);
+  if(r.t==='lock'&&!r.open)return {ok:false,why:`serratura chiusa in ${w}: la apre la Volpe, da una stanza vicina, con un ${r.k} esatto (Scasso) o con il grimaldello`};
+  if(r.t==='laser'&&!r.off)return {ok:false,why:`laser acceso in ${w}: lo spegne il Gatto con un ${cfg.hackLaser}+ (Hacker), anche da lontano, o lo specchio`};
+  if(r.t==='gate'){const o=other(mover);if(!(onLever(s,r.k,mover)||s.pawns[o]===to)){const lv=levers(s,r.k).map(i=>coord(s,i)).join(' o ');return {ok:false,why:`cancello ${r.k} chiuso in ${w}: si apre mentre l'altro sta su una leva ${r.k} (${lv}), o se l'altro è già dentro il cancello`}}}
   return {ok:true};
 }
+function blockedMoves(s,seat){ // mosse impedite da un ostacolo (non dai muri), con il motivo
+  const out=[];for(const pawn of SEATS)for(const d of DIRS[seat]){const from=s.pawns[pawn],to=neighbor(s,from,d);const c=canEnter(s,pawn,from,to);if(!c.ok&&!c.wall)out.push({pawn,dir:d,to,why:c.why})}return out}
 function enter(s,p,to){
   s.pawns[p]=to;const r=s.rooms[to];const first=!r.rev;r.rev=true;const cfg=cfgOf(s);
   const where=coord(s,to);
@@ -511,7 +530,7 @@ function apply(S,p,a){
   return {ok:true,s};
 }
 
-if(typeof module!=='undefined')module.exports={MODES,SEATS,genMap,newGame,emptyLobby,apply,slotOptions,toolTargets,winkTag,bfs,coord,canEnter,left,cfgOf,stepTargets,lobbyReady,other};
+if(typeof module!=='undefined')module.exports={keyObstacles,levers,blockedMoves,cutVertices,MODES,SEATS,genMap,newGame,emptyLobby,apply,slotOptions,toolTargets,winkTag,bfs,coord,canEnter,left,cfgOf,stepTargets,lobbyReady,other};
 
 /* ===== Interfaccia, rete (MQTT pubblico, nessun account) ===== */
 const app=document.getElementById('app'),toastEl=document.getElementById('toast');
@@ -705,12 +724,16 @@ window.addEventListener('hashchange',()=>{const c=roomFromHash();if(c&&c!==room)
 function tip(){
   if(!S||S.status!=='playing'||S.mode!=='facile')return null;const p=me();if(!p)return null;
   const T=[];const r=S.round,ph=S.phase;
-  if(ph==='piano'&&r===1)T.push(p==='G'
-    ?['g-radio','Sei il <b class="cat">Gatto</b>. Hai la <b>radio</b>: sulla mappa vedi i puntini rossi della guardia e la sua destinazione (D, poi il riquadro vuoto). Non sai cosa c\'è nelle stanze col punto di domanda: te lo dirà la Volpe.']
-    :['v-plan','Sei la <b class="fox">Volpe</b>. Hai la <b>planimetria</b>: vedi tutte le stanze, il Gatto no. Raccontagli la strada per la cassaforte usando le coordinate, tipo «in C2 c\'è una telecamera».']);
+  if(ph==='piano'&&r===1&&p==='G')T.push(['g-radio','Sei il <b class="cat">Gatto</b>. Hai la <b>radio</b>: sulla mappa vedi i puntini rossi della guardia e la sua destinazione (D, poi il riquadro vuoto). Non sai cosa c\'è nelle stanze col punto di domanda: te lo dirà la Volpe.']);
+  if(ph==='piano'&&r===1){const ko=keyObstacles(S);const lv=levers(S,'A').map(i=>coord(S,i)).join(' e ');
+    const desc=ko.map(i=>{const x=S.rooms[i];return x.t==='lock'?`la <b>serratura ${x.k}</b> in ${coord(S,i)}`:x.t==='laser'?`il <b>laser</b> in ${coord(S,i)}`:`il <b>cancello A</b> in ${coord(S,i)}`});
+    T.push(p==='V'
+      ?['v-route',`Sei la <b class="fox">Volpe</b> e hai la <b>planimetria</b>: vedi tutte le stanze, il Gatto no. Sulla strada per la cassaforte (${coord(S,S.vault)}) ci sono tre ostacoli che <b>non si possono aggirare</b>: ${desc.join(', ')}. Il Gatto non li vede: diglieli. La serratura la apri tu con un ${S.rooms[ko.find(i=>S.rooms[i].t==='lock')].k} esatto quando sei accanto; il laser lo spegne il Gatto con un ${cfgOf(S).hackLaser}+; il cancello si apre mentre uno di voi sta su una leva A (${lv}).`]
+      :['g-route',`Sulla strada ci sono tre ostacoli obbligati che solo la Volpe vede: una serratura (la apre lei), un laser (lo spegni tu con un ${cfgOf(S).hackLaser}+ nell\'Hacker, anche da lontano) e un cancello con due leve. Fatteli dire con le coordinate.`])}
   if(ph==='piano'&&r===1)T.push(['goal','Obiettivo: arrivate <b>entrambi</b> nella cassaforte, apritela e tornate <b>insieme</b> al molo (in basso a sinistra) prima dell\'alba. Il sospetto non deve riempire la barra rossa.']);
   if(ph==='piano'&&r===2)T.push(['split','Movimento diviso: <b class="cat">il Gatto sposta chiunque in verticale ↑↓</b>, <b class="fox">la Volpe sposta chiunque in orizzontale ←→</b>. Per andare in diagonale vi servite a vicenda: decidete adesso chi sposta chi.']);
-  if(ph==='piano'&&r===3)T.push(['gate','Leve e cancelli: un cancello si apre se qualcuno sta sulla leva con la stessa lettera, oppure se l\'altro è già dentro il cancello. Uno tiene la leva, l\'altro entra, poi il primo lo raggiunge.']);
+  if(ph==='piano'&&r>=2&&!seen.has('gate'))T.push(['gate','Il cancello A si apre solo mentre uno di voi sta su una <b>leva A</b> (ce n\'è una per lato), oppure se l\'altro è già dentro il cancello. Quindi: uno tiene la leva, l\'altro entra nel cancello e lo aspetta lì; poi il primo lo raggiunge. Al ritorno si rifà al contrario con l\'altra leva.']);
+  if(ph==='dadi'&&blockedMoves(S,p).length)T.push(['blocked','Alcune mosse sono <b>bloccate</b> da un ostacolo: sotto i pulsanti trovi scritto cosa serve per aprirle e chi può farlo.']);
   if(ph==='piano'&&r===4)T.push(['div','Petardo: con un 5 o un 6 mandate la guardia dove volete. Il Gatto vede dove sta andando: usatelo prima che vi trovi.']);
   if(ph==='dadi'&&r===1)T.push(['silence','<b>Silenzio radio.</b> Da ora non si parla e non si fanno gesti: si piazza un dado a testa, a turno, e ogni dado agisce subito. Il <b>Ballo</b> è obbligatorio per tutti e due: dadi uguali regalano un espresso, dadi lontani 4 o più attirano sguardi.']);
   if(ph==='dadi'&&r===2)T.push(['dice2','Un <b>6</b> nei Passi fa fare due passi. Un <b>espresso</b> cambia un dado di ±1. Il Gatto <b>hackera</b> telecamere (2+) e laser (4+) a distanza, su qualsiasi stanza; la Volpe <b>scassina</b> le serrature vicine con il numero esatto.']);
@@ -777,7 +800,7 @@ function lobbyHTML(){
     if(s)body=`<p><b>${esc(s.name)}</b> ${mine&&!LOCAL?'<span class="pill on">sei tu</span>':''}</p>${mine||LOCAL?`<button class="btn small ghost" data-a="stand" data-seat="${p}">Lascia il posto</button>`:''}`;
     else body=`<div class="row" style="flex-wrap:nowrap"><input type="text" data-seat="${p}" placeholder="Il tuo nome" maxlength="18" value="${esc(ui.draft[p])}"><button class="btn" data-a="sit" data-seat="${p}">Siediti</button></div>`;
     return `<section class="card seat"><h3 class="${p==='G'?'cat':'fox'}">${p==='G'?'Il Gatto':'La Volpe'}</h3><p class="note">${role}</p>${body}</section>`};
-  const modes=Object.entries(MODES).map(([k,m])=>`<button class="mode" data-a="mode" data-m="${k}" aria-pressed="${S.mode===k}"><b>${k==='facile'?'Facile':'Avanzata'}</b><span>${k==='facile'?'Tutorial guidato, palazzo 4×4, una guardia lenta, 10 rintocchi.':'Palazzo 5×5, guardie veloci, secondo guardiano, attrezzi alla cieca, 11 rintocchi.'}</span></button>`).join('');
+  const modes=Object.entries(MODES).map(([k,m])=>`<button class="mode" data-a="mode" data-m="${k}" aria-pressed="${S.mode===k}"><b>${k==='facile'?'Facile':'Avanzata'}</b><span>${k==='facile'?'Tutorial guidato, palazzo 4×4, una guardia lenta, 14 rintocchi.':'Palazzo 5×5, guardie veloci, secondo guardiano, attrezzi alla cieca, 13 rintocchi.'}</span></button>`).join('');
   return statusLine()+`<div class="stack">
     <h2 style="font-size:34px;font-style:italic">Il tavolo</h2>
     ${LOCAL?'<p class="note">Due ruoli sullo stesso telefono: utile per imparare. Puoi passare da una vista all\'altra durante la partita.</p>':`<section class="card"><span class="lbl">Invita</span><p class="code">${esc(room)}</p><p class="share" id="sharelink">${esc(shareUrl())}</p><button class="btn" data-a="copy">Copia il link</button><p class="note">Chi è il Gatto tiene la partita: la sua pagina deve restare aperta mentre giocate.</p></section>`}
@@ -796,6 +819,20 @@ function hudHTML(){
     <div class="sus"><span class="lbl">Sospetto ${S.sus}/${cfg.susMax}${S.loot?' · <span class="gold">maschera presa</span>':''}</span><div class="susbar">${bars}</div></div>
     <div class="bell"><span class="lbl">Espresso</span><span class="cups">${cups}</span></div>
   </div>`;
+}
+function legendHTML(){
+  const p=me(),cfg=cfgOf(S);const vis=new Set();S.rooms.forEach(r=>{if(p==='V'||r.rev||S.status!=='playing')vis.add(r.t)});
+  const L={molo:'Molo: si parte e si scappa da qui.',vault:'Cassaforte: ci dovete essere entrambi a fine dadi.',
+    lock:`Serratura (numero): blocca. La apre <b class="fox">la Volpe</b> da una stanza vicina con un dado uguale al numero.`,
+    laser:`Laser: blocca. Lo spegne <b class="cat">il Gatto</b> da lontano con un ${cfg.hackLaser}+.`,
+    gate:'Cancello: blocca, tranne mentre qualcuno sta su una leva con la stessa lettera o l\'altro è già dentro.',
+    leva:'Leva: stai qui sopra per tenere aperto il cancello. Ce n\'è una per lato.',
+    cam:`Telecamera: non blocca, ma entrarci accesa costa 1 sospetto. Il Gatto la spegne con un ${cfg.hackCam}+.`,
+    dog:'Cane: se lo svegli, sospetto +1 e la guardia corre lì.'};
+  const rows=['vault','lock','laser','gate','leva','cam','dog','molo'].filter(t=>vis.has(t)).map(t=>`<span class="ic2">${ICON[t]}</span><span>${L[t]}</span>`).join('');
+  const extra=p==='G'&&S.status==='playing'?'<span class="ic2 q2">?</span><span>Stanza che conosce solo la Volpe.</span>':'';
+  const open=S.mode==='facile'?' open':'';
+  return `<details class="legendbox"${open}><summary>Legenda della mappa</summary><div class="legend">${rows}${extra}</div></details>`;
 }
 function boardHTML(){
   const p=me(),n=S.n,cfg=cfgOf(S);
@@ -826,7 +863,7 @@ function boardHTML(){
   const cols=[...'ABCDE'].slice(0,n).map(c=>`<span>${c}</span>`).join(''),rows=Array.from({length:n},(_,k)=>`<span>${k+1}</span>`).join('');
   return `<div class="boardwrap"><span></span><div class="colh" style="grid-template-columns:repeat(${n},1fr)">${cols}</div>
     <div class="rowh" style="grid-template-rows:repeat(${n},1fr)">${rows}</div>
-    <div class="board" style="grid-template-columns:repeat(${n},1fr);grid-template-rows:repeat(${n},1fr)">${cells}</div></div>`;
+    <div class="board" style="grid-template-columns:repeat(${n},1fr);grid-template-rows:repeat(${n},1fr)">${cells}</div></div>${legendHTML()}`;
 }
 function tipHTML(){const t=tip();if(!t)return'';return `<div class="tip"><span class="lbl">Tutorial</span><p>${t.t}</p><button class="btn small" data-a="tip" data-k="${t.k}" style="align-self:flex-start">Capito</button></div>`}
 function toolsHTML(p,mode){ // mode: 'plan'|'play'
@@ -915,6 +952,7 @@ function actionsHTML(p){
     rows.push(btn(`data-a="place" data-slot="passi" data-pawn="${x.pawn}" data-dir="${x.dir}" data-steps="${x.steps}"`,`Muovi ${who} ${ARROW[x.dir].repeat(x.steps)}`,`Passi · arriva in ${coord(S,dest)}${stepWarn(x.path)}`,x.steps===2?'2 passi':''));
     if(x.steps===2)rows.push(btn(`data-a="place" data-slot="passi" data-pawn="${x.pawn}" data-dir="${x.dir}" data-steps="1"`,`Muovi ${who} ${ARROW[x.dir]}`,`Passi · solo un passo, fino a ${coord(S,x.path[0])}${stepWarn(x.path.slice(0,1))}`,'1 passo'));
   }
+  if(!must)for(const b of blockedMoves(S,p)){const who=b.pawn==='G'?'il Gatto':'la Volpe';rows.push(`<div class="act blocked"><b>${who.charAt(0).toUpperCase()+who.slice(1)} ${ARROW[b.dir]} bloccato</b><span>${b.why}.</span><em>chiuso</em></div>`)}
   if(!opts.some(x=>x.slot==='passi')&&!must)rows.push(`<p class="note">Con questo dado nessuno può muoversi nelle tue direzioni (${DIRS[p].map(x=>ARROW[x]).join(' ')}).</p>`);
   for(const x of opts){
     if(x.slot==='ballo'){const ov=S.slots.ballo[o];rows.push(btn(`data-a="place" data-slot="ballo"`,'Ballo',ov!=null?`${o==='G'?'Il Gatto':'La Volpe'} ha messo un ${ov}: ${v===ov?'uguale, +1 espresso':Math.abs(v-ov)>=cfg.balloBad?'troppo distante, sospetto +1':'abbastanza vicino, nessun effetto'}`:'Obbligatorio. Uguale a quello dell\'altro: +1 espresso',must?'obbligatorio':''))}
@@ -979,15 +1017,17 @@ function rulesHTML(){
     <li><b>Petardo</b> (uno per rintocco, 5+ in facile, 6 in avanzata): manda una guardia dove volete.</li>
     <li><b>Hacker</b> (Gatto) e <b>Scasso</b> (Volpe), <b>Pausa</b> per scartare.</li>
     <li><b>Occhiolino</b>: puoi mostrare all'altro il tuo dado più alto, il più basso o l'unico rimasto.</li></ul>
+    <h3>Gli ostacoli obbligati</h3>
+    <p>Ogni palazzo ha una <b>serratura</b>, un <b>laser</b> e un <b>cancello</b> piazzati dove non si possono aggirare: per arrivare alla cassaforte dovete superarli tutti e tre, ognuno con il ruolo giusto. La serratura la apre la Volpe, il laser lo spegne il Gatto, il cancello si attraversa in coppia usando le leve. Una volta aperti, serratura e laser restano aperti anche per il ritorno.</p>
     <h3>Le stanze</h3>
-    <div class="legend">${L('molo','Molo: partenza e fuga.')}${L('vault','Cassaforte: si apre solo se ci siete entrambi alla fine dei dadi.')}${L('cam','Telecamera: entrarci accesa costa 1 sospetto.')}${L('laser','Laser: non si passa finché è acceso.')}${L('lock','Serratura: chiusa finché la Volpe non la apre col numero indicato.')}${L('dog','Cane: se lo svegli, sospetto +1 e la guardia corre lì.')}${L('leva','Leva: tiene aperto il cancello con la stessa lettera.')}${L('gate','Cancello: entri se qualcuno è sulla leva giusta o se l\'altro è già dentro.')}</div>
+    <div class="legend">${L('molo','Molo: partenza e fuga.')}${L('vault','Cassaforte: si apre solo se ci siete entrambi alla fine dei dadi.')}${L('cam','Telecamera: entrarci accesa costa 1 sospetto.')}${L('laser','Laser: non si passa finché è acceso.')}${L('lock','Serratura: chiusa finché la Volpe non la apre col numero indicato.')}${L('dog','Cane: se lo svegli, sospetto +1 e la guardia corre lì.')}${L('leva','Leva: finché ci stai sopra, il cancello con la stessa lettera è aperto. Ce n\'è una per lato del cancello.')}${L('gate','Cancello: entri se l\'altro sta su una leva giusta o è già dentro il cancello. Al ritorno lo riattraversate usando l\'altra leva.')}</div>
     <h3>La cassaforte</h3>
     <p>Ognuno riceve dei numeri segreti. Giocateli tutti in ordine crescente, senza parlare: chi pensa di avere il numero più basso lo gioca. Se qualcuno aveva un numero più basso, quei numeri si perdono e il sospetto sale di 1.</p>
     <h3>Attrezzi</h3>
     <p>Grimaldello, specchio, osso e fumogeno si usano nel tuo turno senza spendere dadi, su una stanza vicina. In avanzata vedi gli attrezzi dell'altro ma non i tuoi: nel piano potete fare un <b>sussurro</b> a testa, che indica tutti gli attrezzi di un tipo. Un attrezzo sbagliato fa rumore: sospetto +1. Regola d'onore: non ditevi a voce gli attrezzi.</p>
     <h3>Facile e avanzata</h3>
     <table class="tbl"><tr><th></th><th>Facile</th><th>Avanzata</th></tr>
-    <tr><td>Palazzo</td><td>4×4</td><td>5×5</td></tr><tr><td>Rintocchi</td><td>10</td><td>11</td></tr><tr><td>Sospetto massimo</td><td>8</td><td>7</td></tr>
+    <tr><td>Palazzo</td><td>4×4</td><td>5×5</td></tr><tr><td>Rintocchi</td><td>14</td><td>13</td></tr><tr><td>Sospetto massimo</td><td>10</td><td>8</td></tr>
     <tr><td>Guardie</td><td>1, lenta</td><td>veloce, + una seconda dopo il furto</td></tr><tr><td>Cassaforte</td><td>2 numeri a testa da 1 a 50</td><td>3 numeri a testa da 1 a 100</td></tr>
     <tr><td>Attrezzi</td><td>visibili</td><td>alla cieca, con sussurri</td></tr><tr><td>Ballo</td><td>sospetto se distanti 4+</td><td>sospetto se distanti 3+</td></tr></table>
     <h3>Giocare a distanza</h3>
